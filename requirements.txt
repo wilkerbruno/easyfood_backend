@@ -1,0 +1,9 @@
+# EasyFood - Dependências de Produção
+flask==3.0.3
+flask-sqlalchemy==3.1.1
+flask-jwt-extended==4.6.0
+flask-cors==4.0.1
+bcrypt==4.1.3
+pymysql==1.1.1
+cryptography==42.0.5
+gunicorn==21.2.0

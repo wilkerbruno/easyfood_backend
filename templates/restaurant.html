@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#FF6B35">
+  <title>EasyFood - Restaurante</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .tab-bar { overflow-x: auto; }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-btn { min-width: 90px; font-size: 12px; }
+    .qr-card { background: var(--bg-card); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+    .qr-img-wrap { display: flex; justify-content: center; margin: 10px 0; }
+    .qr-img-wrap img { width: 180px; height: 180px; border-radius: 10px; background: #fff; padding: 6px; }
+    .qr-token { font-size: 10px; color: var(--text-muted); word-break: break-all; text-align: center; margin-bottom: 10px; }
+    .qr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ LOGIN ═══════════════════════════════════════════════ -->
+  <div id="screen-login" class="screen active">
+    <div class="scroll-content" style="display:flex;flex-direction:column;justify-content:center;min-height:100%;">
+      <div class="logo mb-8">easy<span>food</span></div>
+      <p class="text-secondary text-center mb-12" style="font-size:14px;">Painel do Restaurante</p>
+      <div class="card">
+        <div class="input-group">
+          <label>E-mail</label>
+          <input id="login-email" type="email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="input-group">
+          <label>Senha</label>
+          <input id="login-password" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div id="login-error" class="alert alert-danger hidden"></div>
+        <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Entrar</button>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);">
+          <p class="text-muted text-center" style="font-size:12px;margin-bottom:8px;">Demonstração (senha: admin123)</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@sabor.com')">Sabor Brasileiro</button>
+            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@pizza.com')">Pizza Express</button>
+            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@sushi.com')">Sushi World</button>
+            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@burger.com')">Burger House</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAINEL ══════════════════════════════════════════════ -->
+  <div id="screen-panel" class="screen">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo" style="font-size:20px;flex-shrink:0;">easy<span>food</span></div>
+      <span id="header-employee" class="text-muted" style="font-size:12px;flex:1;padding:0 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"></span>
+      <span id="refresh-dot" style="font-size:10px;color:var(--text-muted);margin-right:6px;"></span>
+      <button onclick="doLogout()" style="background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;white-space:nowrap;">Sair</button>
+    </div>
+
+    <!-- Tab Bar (scrollável) -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-btn-orders"    onclick="switchTab('orders',this)">📋 Pedidos</button>
+      <button class="tab-btn"        id="tab-btn-inventory" onclick="switchTab('inventory',this)">📦 Estoque</button>
+      <button class="tab-btn"        id="tab-btn-qrcodes"   onclick="switchTab('qrcodes',this)">🔲 QR Codes</button>
+      <button class="tab-btn"        id="tab-btn-reports"   onclick="switchTab('reports',this)">📊 Relatórios</button>
+      <button class="tab-btn"        id="tab-btn-employees" onclick="switchTab('employees',this)">👥 Equipe</button>
+      <button class="tab-btn"        id="tab-btn-bankaccount" onclick="switchTab('bankaccount',this)">🏦 Conta</button>
+    </div>
+
+    <!-- ── ABA: PEDIDOS ──────────────────────────────────────── -->
+    <div id="tab-orders" class="tab-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+      <div id="dashboard-stats" style="padding:10px 14px 0;flex-shrink:0;"></div>
+      <div class="filter-chips" id="filter-chips">
+        <div class="chip active" onclick="filterOrders('',this)">Todos</div>
+        <div class="chip" onclick="filterOrders('pending',this)">⏳ Aguardando</div>
+        <div class="chip" onclick="filterOrders('confirmed',this)">✅ Confirmados</div>
+        <div class="chip" onclick="filterOrders('preparing',this)">👨‍🍳 Preparando</div>
+        <div class="chip" onclick="filterOrders('ready',this)">🎉 Prontos</div>
+        <div class="chip" onclick="filterOrders('delivered',this)">🛵 Entregues</div>
+      </div>
+      <div id="orders-content" class="scroll-content"></div>
+    </div>
+
+    <!-- ── ABA: ESTOQUE ──────────────────────────────────────── -->
+    <div id="tab-inventory" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="padding:10px 14px;display:flex;gap:8px;flex-shrink:0;">
+        <input type="text" id="inv-search" placeholder="🔍 Buscar produto..." oninput="filterInventory()" style="flex:1;">
+        <button class="btn btn-primary btn-sm" onclick="openAddInventory()">+ Novo</button>
+      </div>
+      <div id="inventory-content" class="scroll-content"></div>
+    </div>
+
+    <!-- ── ABA: QR CODES ─────────────────────────────────────── -->
+    <div id="tab-qrcodes" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="padding:12px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <button class="btn btn-primary" style="flex:1;" onclick="openModal('create-qr')">
+          + Gerar QR Codes de Mesa
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="loadQRCodes()" title="Atualizar">↻</button>
+      </div>
+      <div id="qrcodes-content" class="scroll-content"></div>
+    </div>
+
+    <!-- ── ABA: RELATÓRIOS ───────────────────────────────────── -->
+    <div id="tab-reports" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div class="scroll-content">
+        <div class="card mb-12">
+          <p class="fw-bold mb-8">Período</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="input-group" style="margin:0;"><label>De</label><input type="date" id="report-from"></div>
+            <div class="input-group" style="margin:0;"><label>Até</label><input type="date" id="report-to"></div>
+          </div>
+          <button class="btn btn-primary mt-8" onclick="loadReport()">Gerar Relatório</button>
+        </div>
+        <div id="report-content"></div>
+      </div>
+    </div>
+
+
+    <!-- ABA EQUIPE -->
+    <div id="tab-employees" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="padding:10px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06);">
+        <div id="employees-role-info" class="text-muted" style="font-size:12px;flex:1;"></div>
+        <button class="btn btn-primary btn-sm" id="btn-add-employee" onclick="openAddEmployee()">+ Novo</button>
+      </div>
+      <div id="employees-content" class="scroll-content"></div>
+    </div>
+
+    <!-- ABA CONTA BANCARIA -->
+    <div id="tab-bankaccount" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div id="bankaccount-content" class="scroll-content"></div>
+    </div>
+
+  </div><!-- #screen-panel -->
+
+</div><!-- #app -->
+
+<!-- Área de impressão (invisível) -->
+<div id="print-area" style="display:none;"></div>
+
+<!-- ═══ MODAIS ═══════════════════════════════════════════════ -->
+
+<!-- Modal: Criar QR Code -->
+<div id="modal-create-qr" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('create-qr')">✕</button>
+    <div class="modal-title">🔲 Gerar QR Codes de Mesa</div>
+
+    <div class="input-group">
+      <label>Número / Nome da mesa *</label>
+      <input type="text" id="qr-table-num" placeholder="Ex: 1, A1, Varanda, Balcão...">
+    </div>
+    <div class="input-group">
+      <label>Etiqueta personalizada</label>
+      <input type="text" id="qr-label" placeholder="Ex: Mesa 1 - Área Interna">
+    </div>
+    <div class="input-group">
+      <label>Quantidade de mesas a gerar</label>
+      <input type="number" id="qr-qty" value="1" min="1" max="50">
+    </div>
+    <div class="alert alert-warning" style="font-size:13px;margin-bottom:14px;">
+      💡 Se gerar mais de 1, serão criadas mesas com sufixo automático:<br>
+      Ex: "1-1", "1-2", "1-3"...
+    </div>
+    <div id="qr-create-error" class="alert alert-danger hidden"></div>
+    <button class="btn btn-primary" onclick="createQRCodes()" id="btn-create-qr">
+      🔲 Gerar QR Codes
+    </button>
+  </div>
+</div>
+
+<!-- Modal: Movimentação de Estoque -->
+<div id="modal-movement" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('movement')">✕</button>
+    <div class="modal-title" id="movement-title">Movimentação</div>
+    <div id="movement-info" class="text-muted" style="font-size:13px;margin-bottom:12px;"></div>
+    <div class="input-group">
+      <label id="movement-qty-label">Quantidade</label>
+      <input type="number" id="movement-qty" min="0.001" step="0.001" placeholder="0">
+    </div>
+    <div class="input-group">
+      <label>Motivo (opcional)</label>
+      <input type="text" id="movement-reason" placeholder="Ex: Compra do fornecedor...">
+    </div>
+    <button class="btn btn-primary" onclick="confirmMovement()">Confirmar</button>
+  </div>
+</div>
+
+<!-- Modal: Adicionar Produto -->
+<div id="modal-add-inv" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('add-inv')">✕</button>
+    <div class="modal-title">Novo Produto no Estoque</div>
+    <div class="input-group"><label>Nome *</label><input type="text" id="inv-name" placeholder="Ex: Farinha de trigo"></div>
+    <div class="input-group"><label>Categoria</label><input type="text" id="inv-category" placeholder="Ex: Insumos, Bebidas..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="input-group"><label>Quantidade inicial</label><input type="number" id="inv-qty" min="0" step="0.001" value="0"></div>
+      <div class="input-group">
+        <label>Unidade</label>
+        <select id="inv-unit">
+          <option value="unit">Unidade</option>
+          <option value="kg">Kg</option>
+          <option value="g">Gramas</option>
+          <option value="l">Litros</option>
+          <option value="ml">mL</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="input-group"><label>Qtd. mínima (alerta)</label><input type="number" id="inv-min" min="0" step="0.001" value="0"></div>
+      <div class="input-group"><label>Custo unitário (R$)</label><input type="number" id="inv-cost" min="0" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="input-group"><label>Fornecedor</label><input type="text" id="inv-supplier" placeholder="Nome do fornecedor"></div>
+    <div class="input-group"><label>Data de validade</label><input type="date" id="inv-expiry"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="input-group"><label>Lote</label><input type="text" id="inv-batch" placeholder="Ex: L001"></div>
+      <div class="input-group"><label>Localização</label><input type="text" id="inv-location" placeholder="Ex: Geladeira A"></div>
+    </div>
+    <div class="input-group"><label>Observações</label><textarea id="inv-notes" rows="2" placeholder="Informações adicionais..."></textarea></div>
+    <button class="btn btn-primary" onclick="saveInventoryItem()">Salvar Produto</button>
+  </div>
+</div>
+
+
+<!-- MODAL: ADICIONAR/EDITAR FUNCIONÁRIO -->
+<div id="modal-employee" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('employee')">✕</button>
+    <div class="modal-title" id="employee-modal-title">Novo Funcionário</div>
+    <input type="hidden" id="employee-edit-id">
+    <div class="input-group"><label>Nome completo</label><input type="text" id="emp-name" placeholder="Nome do funcionário"></div>
+    <div class="input-group"><label>E-mail *</label><input type="email" id="emp-email" placeholder="email@restaurante.com"></div>
+    <div class="input-group"><label>Senha <span id="emp-pwd-hint" style="color:var(--text-muted);font-size:11px;">(mín. 6 caracteres)</span></label>
+      <input type="password" id="emp-password" placeholder="••••••••"></div>
+    <div class="input-group">
+      <label>Cargo</label>
+      <select id="emp-role" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:none;border-radius:8px;padding:12px 14px;font-size:15px;">
+        <option value="attendant">Funcionário</option>
+        <option value="manager">Gerente</option>
+      </select>
+    </div>
+    <div id="emp-error" class="alert alert-danger hidden"></div>
+    <button class="btn btn-primary" onclick="saveEmployee()" id="btn-save-employee">Salvar</button>
+  </div>
+</div>
+
+<script src="/static/js/core.js"></script>
+<script>
+// =============================================================
+//  EASYFOOD - Painel do Restaurante
+// =============================================================
+
+let employee       = null;
+let allOrders      = [];
+let allInventory   = [];
+let currentFilter  = "";
+let movementTarget = null;
+let refreshTimer   = null;
+let currentTab     = "orders";
+
+// ── Login ─────────────────────────────────────────────────────
+function fillLogin(email) {
+  document.getElementById("login-email").value    = email;
+  document.getElementById("login-password").value = "admin123";
+}
+
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim();
+  const pass  = document.getElementById("login-password").value;
+  const errEl = document.getElementById("login-error");
+  const btn   = document.getElementById("login-btn");
+  errEl.classList.add("hidden");
+  if (!email || !pass) { errEl.textContent = "Preencha e-mail e senha"; errEl.classList.remove("hidden"); return; }
+
+  btn.disabled = true; btn.textContent = "Entrando...";
+  const { status, body } = await http.employeeLogin(email, pass);
+  btn.disabled = false; btn.textContent = "Entrar";
+
+  if (status === 200) {
+    http.setEmployee(body.access_token);
+    employee = body.employee;
+    showPanel();
+  } else {
+    errEl.textContent = body.error || "E-mail ou senha inválidos";
+    errEl.classList.remove("hidden");
+  }
+}
+
+function doLogout() {
+  http.clearEmployee();
+  employee = null;
+  stopRefresh();
+  document.getElementById("screen-panel").classList.remove("active");
+  document.getElementById("screen-login").classList.add("active");
+  document.getElementById("login-password").value = "";
+  document.getElementById("login-error").classList.add("hidden");
+}
+
+function showPanel() {
+  document.getElementById("screen-login").classList.remove("active");
+  document.getElementById("screen-panel").classList.add("active");
+  document.getElementById("header-employee").textContent = employee.name;
+  switchTab("orders", document.getElementById("tab-btn-orders"));
+  startRefresh();
+}
+
+// ── Auto-refresh ──────────────────────────────────────────────
+function startRefresh() {
+  stopRefresh();
+  refreshTimer = setInterval(async () => {
+    if (currentTab === "orders") { await loadOrders(true); await loadDashboard(); }
+  }, 10000);
+}
+
+function stopRefresh() {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  currentTab = name;
+  document.querySelectorAll(".tab-content").forEach(t => t.style.display = "none");
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(`tab-${name}`).style.display = "flex";
+  btn.classList.add("active");
+
+  if (name === "orders")    { loadDashboard(); loadOrders(); }
+  if (name === "inventory") loadInventory();
+  if (name === "qrcodes")   loadQRCodes();
+  if (name === "reports")   initReport();
+  if (name === "employees")  loadEmployees();
+  if (name === "bankaccount") loadBankAccount();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+async function loadDashboard() {
+  const { status, body } = await http.getDashboard();
+  if (status !== 200) return;
+  document.getElementById("dashboard-stats").innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" style="color:${body.pending_orders>0?"var(--warning)":"var(--primary)"}">${body.pending_orders}</div>
+        <div class="stat-label">Aguardando</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--info)">${body.preparing_orders}</div>
+        <div class="stat-label">Preparando</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="font-size:17px;">${fmt.currency(body.total_sales_today)}</div>
+        <div class="stat-label">Vendas hoje</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:${body.low_stock_alerts>0?"var(--danger)":"var(--success)"}">${body.low_stock_alerts}</div>
+        <div class="stat-label">Alertas estoque</div>
+      </div>
+    </div>`;
+}
+
+// ── Pedidos ───────────────────────────────────────────────────
+async function loadOrders(silent = false) {
+  if (!silent) document.getElementById("orders-content").innerHTML = spinner();
+  const { status, body } = await http.getRestaurantOrders(currentFilter);
+  if (status === 401) { doLogout(); return; }
+  if (status !== 200) {
+    if (!silent) document.getElementById("orders-content").innerHTML = `<div class="alert alert-danger">Erro ao carregar pedidos</div>`;
+    return;
+  }
+  allOrders = body;
+  renderOrders(body);
+}
+
+function filterOrders(status, el) {
+  currentFilter = status;
+  document.querySelectorAll("#filter-chips .chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  loadOrders();
+}
+
+function renderOrders(orders) {
+  const el = document.getElementById("orders-content");
+  if (!orders.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Nenhum pedido encontrado</p></div>`; return; }
+  el.innerHTML = orders.map(order => {
+    const actions   = getNextActions(order.status);
+    const itemsList = (order.items||[]).map(i => `${i.quantity}x ${escHtml(i.name)}`).join(", ");
+    return `
+      <div class="order-card">
+        <div class="order-card-header">
+          <div>
+            <span class="order-card-title">Pedido #${order.id}</span>
+            ${order.table_number ? `<span class="text-muted" style="font-size:12px;margin-left:6px;">Mesa ${order.table_number}</span>` : ""}
+          </div>
+          <div style="text-align:right;">
+            ${badge(order.status)}
+            <div class="text-primary fw-bold" style="font-size:15px;margin-top:2px;">${fmt.currency(order.total)}</div>
+          </div>
+        </div>
+        <div class="order-card-items">${itemsList||"—"}</div>
+        ${order.notes ? `<div style="font-size:12px;color:var(--warning);margin-bottom:6px;">📝 ${escHtml(order.notes)}</div>` : ""}
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">${fmt.date(order.created_at)}</div>
+        <div class="order-card-actions">
+          ${actions.map(([st,label,cls]) =>
+            `<button class="btn ${cls} btn-sm" onclick="updateStatus(${order.id},'${st}',this)">${label}</button>`
+          ).join("")}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function getNextActions(status) {
+  return ({
+    pending:   [["confirmed","✓ Confirmar","btn-success"],["cancelled","✗ Cancelar","btn-danger"]],
+    confirmed: [["preparing","▶ Iniciar Preparo","btn-info"]],
+    preparing: [["ready","✓ Marcar Pronto","btn-success"]],
+    ready:     [["delivered","✓ Entregue","btn-info"]],
+  })[status] || [];
+}
+
+async function updateStatus(orderId, status, btn) {
+  btn.disabled = true; btn.textContent = "...";
+  const { status: s, body } = await http.updateOrderStatus(orderId, status);
+  if (s === 200) {
+    toast(`Pedido #${orderId}: ${statusLabel[status]}`, "success");
+    await loadOrders(true); await loadDashboard();
+  } else {
+    toast(body.error || "Erro ao atualizar", "error");
+    btn.disabled = false; btn.textContent = statusLabel[status];
+  }
+}
+
+// ── Estoque ───────────────────────────────────────────────────
+async function loadInventory() {
+  const el = document.getElementById("inventory-content");
+  el.innerHTML = spinner();
+  const { status, body } = await http.getInventory();
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar</div>`; return; }
+  allInventory = body;
+  renderInventory(body);
+}
+
+function filterInventory() {
+  const q = document.getElementById("inv-search").value.toLowerCase();
+  renderInventory(allInventory.filter(i => i.name.toLowerCase().includes(q)));
+}
+
+function renderInventory(items) {
+  const el = document.getElementById("inventory-content");
+  if (!items.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><p>Nenhum produto cadastrado</p></div>`; return; }
+  el.innerHTML = items.map(item => {
+    const expWarn = item.expiry_date && isExpiringSoon(item.expiry_date);
+    return `
+      <div class="inv-card">
+        <div class="inv-header">
+          <div>
+            <div class="inv-name">${escHtml(item.name)}</div>
+            ${item.category ? `<div class="text-muted" style="font-size:12px;">${escHtml(item.category)}</div>` : ""}
+          </div>
+          ${item.is_low_stock ? `<span class="badge badge-cancelled">⚠️ Baixo</span>` : ""}
+        </div>
+        <div class="inv-qty ${item.is_low_stock?"low":""}">
+          <strong>${item.quantity} ${unitLabel(item.unit_type)}</strong>
+          ${item.min_quantity>0?`<span class="text-muted"> (mín: ${item.min_quantity})</span>`:""}
+        </div>
+        ${item.expiry_date ? `<div style="font-size:12px;color:${expWarn?"var(--warning)":"var(--text-muted)"};margin-bottom:6px;">${expWarn?"⚠️":"📅"} Validade: ${fmt.dateOnly(item.expiry_date)}</div>` : ""}
+        ${item.supplier ? `<div class="text-muted" style="font-size:12px;margin-bottom:6px;">🏭 ${escHtml(item.supplier)}</div>` : ""}
+        <div class="inv-actions">
+          <button class="btn btn-success btn-sm" onclick='openMovement(${escJson(item)},"in")'>+ Entrada</button>
+          <button class="btn btn-danger  btn-sm" onclick='openMovement(${escJson(item)},"out")'>− Saída</button>
+          <button class="btn btn-info    btn-sm" onclick='openMovement(${escJson(item)},"adjustment")'>Ajuste</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function unitLabel(u) { return {unit:"un",kg:"kg",g:"g",l:"L",ml:"mL"}[u]||u; }
+function isExpiringSoon(d) { const diff=(new Date(d+"T00:00:00")-new Date())/86400000; return diff>=0&&diff<=7; }
+
+function openMovement(item, type) {
+  movementTarget = { item, type };
+  const labels    = { in:"Entrada de Estoque", out:"Saída de Estoque", adjustment:"Ajuste de Quantidade" };
+  const qtyLabels = { in:"Quantidade a adicionar", out:"Quantidade a remover", adjustment:"Quantidade final (absoluta)" };
+  document.getElementById("movement-title").textContent    = `${labels[type]} — ${item.name}`;
+  document.getElementById("movement-info").textContent     = `Atual: ${item.quantity} ${unitLabel(item.unit_type)}`;
+  document.getElementById("movement-qty-label").textContent = qtyLabels[type];
+  document.getElementById("movement-qty").value    = "";
+  document.getElementById("movement-reason").value = "";
+  openModal("movement");
+}
+
+async function confirmMovement() {
+  const qty    = parseFloat(document.getElementById("movement-qty").value);
+  const reason = document.getElementById("movement-reason").value.trim();
+  if (!qty || qty <= 0) { toast("Informe uma quantidade válida", "error"); return; }
+  const { item, type } = movementTarget;
+  const { status, body } = await http.addMovement(item.id, type, qty, reason);
+  if (status === 200) { closeModal("movement"); toast("Movimentação registrada!", "success"); loadInventory(); }
+  else toast(body.error || "Erro ao registrar", "error");
+}
+
+function openAddInventory() {
+  ["inv-name","inv-category","inv-supplier","inv-batch","inv-location","inv-notes"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("inv-qty").value   = "0";
+  document.getElementById("inv-min").value   = "0";
+  document.getElementById("inv-cost").value  = "";
+  document.getElementById("inv-expiry").value = "";
+  openModal("add-inv");
+}
+
+async function saveInventoryItem() {
+  const name = document.getElementById("inv-name").value.trim();
+  if (!name) { toast("Nome é obrigatório", "error"); return; }
+  const data = {
+    name, category: document.getElementById("inv-category").value.trim(),
+    quantity:     parseFloat(document.getElementById("inv-qty").value)  || 0,
+    min_quantity: parseFloat(document.getElementById("inv-min").value)  || 0,
+    cost_price:   parseFloat(document.getElementById("inv-cost").value) || null,
+    unit_type:    document.getElementById("inv-unit").value,
+    supplier:     document.getElementById("inv-supplier").value.trim(),
+    expiry_date:  document.getElementById("inv-expiry").value || null,
+    batch_number: document.getElementById("inv-batch").value.trim(),
+    location:     document.getElementById("inv-location").value.trim(),
+    notes:        document.getElementById("inv-notes").value.trim(),
+  };
+  const { status, body } = await http.createInventoryItem(data);
+  if (status === 201) { closeModal("add-inv"); toast("Produto cadastrado!", "success"); loadInventory(); }
+  else toast(body.error || "Erro ao salvar", "error");
+}
+
+// ── QR Codes ──────────────────────────────────────────────────
+async function loadQRCodes() {
+  const el = document.getElementById("qrcodes-content");
+  el.innerHTML = spinner();
+  const { status, body } = await http.getQRCodes();
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar QR Codes</div>`; return; }
+
+  if (!body.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔲</div>
+        <p>Nenhum QR Code gerado ainda</p>
+        <p style="font-size:13px;margin-top:8px;">Clique em <strong>"+ Gerar QR Codes de Mesa"</strong> acima para começar</p>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = body.map(qr => `
+    <div class="qr-card" id="qr-card-${qr.id}">
+      <div class="flex-between mb-8">
+        <div>
+          <div class="fw-bold" style="font-size:16px;">${escHtml(qr.label || "Mesa "+qr.table_number)}</div>
+          <div class="text-muted" style="font-size:12px;">Mesa: ${escHtml(qr.table_number)}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteQR(${qr.id})">🗑 Remover</button>
+      </div>
+      <div class="qr-img-wrap" id="qr-img-${qr.id}">
+        <div class="spinner"></div>
+      </div>
+      <div class="qr-token">${qr.qr_token}</div>
+      <div class="qr-actions">
+        <button class="btn btn-secondary btn-sm" onclick="printQR('${qr.qr_token}','${escHtml(qr.label||"Mesa "+qr.table_number)}')">🖨️ Imprimir</button>
+        <button class="btn btn-info btn-sm"      onclick="downloadQR('${qr.qr_token}','${escHtml(qr.label||"Mesa "+qr.table_number)}', ${qr.id})">⬇️ Baixar</button>
+      </div>
+    </div>
+  `).join("");
+
+  // Carrega imagens dos QR Codes
+  body.forEach(qr => loadQRImage(qr));
+}
+
+function qrCodeURL(token) {
+  return `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
+}
+
+function qrImageSrc(token, size=200, dark="000000", light="ffffff") {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrCodeURL(token))}&color=${dark}&bgcolor=${light}&format=png&margin=10`;
+}
+
+function loadQRImage(qr) {
+  const wrap = document.getElementById(`qr-img-${qr.id}`);
+  if (!wrap) return;
+  const img = new Image();
+  img.style.cssText = "width:180px;height:180px;border-radius:10px;";
+  img.onload  = () => { wrap.innerHTML = ""; wrap.appendChild(img); };
+  img.onerror = () => { wrap.innerHTML = `<p class="text-muted" style="font-size:12px;">Erro ao carregar imagem<br><small>(verifique sua internet)</small></p>`; };
+  img.src = qrImageSrc(qr.qr_token);
+}
+
+async function createQRCodes() {
+  const table  = document.getElementById("qr-table-num").value.trim();
+  const label  = document.getElementById("qr-label").value.trim();
+  const qty    = parseInt(document.getElementById("qr-qty").value) || 1;
+  const errEl  = document.getElementById("qr-create-error");
+  const btn    = document.getElementById("btn-create-qr");
+  errEl.classList.add("hidden");
+
+  if (!table) { errEl.textContent = "Informe o número/nome da mesa"; errEl.classList.remove("hidden"); return; }
+
+  btn.disabled = true; btn.textContent = "Gerando...";
+  const { status, body } = await http.createQRCodes({ table_number: table, label, quantity: qty });
+  btn.disabled = false; btn.textContent = "🔲 Gerar QR Codes";
+
+  if (status === 201) {
+    closeModal("create-qr");
+    toast(`${body.length} QR Code(s) gerado(s) com sucesso! 🎉`, "success");
+    loadQRCodes();
+  } else {
+    errEl.textContent = body.error || "Erro ao gerar QR Code";
+    errEl.classList.remove("hidden");
+  }
+}
+
+async function deleteQR(id) {
+  if (!confirm("Remover este QR Code? Clientes não poderão mais usá-lo.")) return;
+  const { status } = await http.deleteQRCode(id);
+  if (status === 200) { toast("QR Code removido", "success"); loadQRCodes(); }
+  else toast("Erro ao remover", "error");
+}
+
+function printQR(token, label) {
+  const qrUrl  = qrCodeURL(token);
+  const imgUrl = qrImageSrc(token, 400, "000000", "ffffff");
+  const win = window.open("", "_blank", "width=500,height=700");
+  win.document.write(`<!DOCTYPE html><html><head>
+    <title>EasyFood - ${label}</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f5f5;}
+      .card{text-align:center;padding:32px 28px;border:3px solid #FF6B35;border-radius:24px;background:#fff;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.12);}
+      .brand{font-size:38px;font-weight:900;color:#1A1A2E;margin-bottom:2px;}
+      .brand span{color:#FF6B35;}
+      .tagline{font-size:13px;color:#888;margin-bottom:16px;}
+      .mesa{font-size:24px;font-weight:800;color:#1A1A2E;margin-bottom:12px;}
+      img{width:260px;height:260px;margin:8px 0;}
+      .instrucao{font-size:14px;color:#444;line-height:1.6;margin-top:12px;}
+      .instrucao strong{color:#FF6B35;}
+      .token{font-size:10px;color:#bbb;margin-top:14px;word-break:break-all;}
+      .divider{border:none;border-top:1px dashed #ddd;margin:14px 0;}
+    </style>
+    </head><body>
+    <div class="card">
+      <div class="brand">easy<span>food</span></div>
+      <div class="tagline">Peça sem esperar!</div>
+      <hr class="divider">
+      <div class="mesa">📍 ${label}</div>
+      <img src="${imgUrl}" alt="QR Code">
+      <div class="instrucao">
+        📱 <strong>Aponte a câmera</strong> do celular<br>
+        para o QR Code acima e faça<br>
+        seu pedido direto da mesa!
+      </div>
+      <hr class="divider">
+      <div class="token">${token}</div>
+    </div>
+    <script>window.onload=function(){setTimeout(function(){window.print();},800);}<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
+function downloadQR(token, label, id) {
+  const imgUrl = qrImageSrc(token, 400);
+  const a = document.createElement("a");
+  a.href     = imgUrl;
+  a.download = `QRCode-${label.replace(/\s+/g,"-")}.png`;
+  a.target   = "_blank";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ── Relatórios ────────────────────────────────────────────────
+function initReport() {
+  if (!document.getElementById("report-from").value) {
+    const today = new Date().toISOString().split("T")[0];
+    const week  = new Date(Date.now()-7*86400000).toISOString().split("T")[0];
+    document.getElementById("report-from").value = week;
+    document.getElementById("report-to").value   = today;
+  }
+}
+
+async function loadReport() {
+  const from = document.getElementById("report-from").value;
+  const to   = document.getElementById("report-to").value;
+  const el   = document.getElementById("report-content");
+  el.innerHTML = spinner();
+  const { status, body } = await http.getSalesReport(from, to);
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao gerar relatório</div>`; return; }
+  el.innerHTML = `
+    <div class="stats-grid mb-12">
+      <div class="stat-card"><div class="stat-value">${body.total_orders}</div><div class="stat-label">Pedidos</div></div>
+      <div class="stat-card"><div class="stat-value" style="font-size:17px;">${fmt.currency(body.total_revenue)}</div><div class="stat-label">Receita total</div></div>
+    </div>
+    ${body.top_items.length ? `
+      <div class="card">
+        <p class="fw-bold mb-8">Top Produtos</p>
+        <table class="report-table">
+          <thead><tr><th>Produto</th><th>Qtd</th><th>Receita</th></tr></thead>
+          <tbody>${body.top_items.map(i => `
+            <tr>
+              <td>${escHtml(i.name)}</td>
+              <td>${i.qty_sold}</td>
+              <td class="text-primary">${fmt.currency(i.revenue)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>` : `<div class="empty-state"><div class="empty-icon">📊</div><p>Sem vendas no período</p></div>`}`;
+}
+
+// ── Modais ────────────────────────────────────────────────────
+function openModal(name)  { document.getElementById(`modal-${name}`).classList.add("open"); }
+function closeModal(name) { document.getElementById(`modal-${name}`).classList.remove("open"); }
+document.querySelectorAll(".modal-overlay").forEach(m => {
+  m.addEventListener("click", e => { if (e.target === m) m.classList.remove("open"); });
+});
+
+// ── Utils ─────────────────────────────────────────────────────
+function escHtml(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function escJson(obj) { return JSON.stringify(obj).replace(/'/g,"&#39;"); }
+
+
+// ── API helpers novos ─────────────────────────────────────────
+http.getEmployees     = ()        => http.request("GET",    "/api/v1/restaurant/employees",     null, true);
+http.createEmployee   = (data)    => http.request("POST",   "/api/v1/restaurant/employees",     data, true);
+http.updateEmployee   = (id,data) => http.request("PUT",    `/api/v1/restaurant/employees/${id}`, data, true);
+http.deleteEmployee   = (id)      => http.request("DELETE", `/api/v1/restaurant/employees/${id}`, null, true);
+http.getRoles         = ()        => http.request("GET",    "/api/v1/restaurant/roles",         null, true);
+http.getBankAccount   = ()        => http.request("GET",    "/api/v1/restaurant/bank-account",  null, true);
+http.saveBankAccount  = (data)    => http.request("POST",   "/api/v1/restaurant/bank-account",  data, true);
+
+// ═════════════════════════════════════════════════════════════
+// ABA EQUIPE
+// ═════════════════════════════════════════════════════════════
+let availableRoles = [];
+
+async function loadEmployees() {
+  const el = document.getElementById("employees-content");
+  el.innerHTML = spinner();
+
+  // Carrega cargos disponíveis para o usuário atual
+  const { status: rs, body: roles } = await http.getRoles();
+  if (rs === 200) {
+    availableRoles = roles;
+    const sel = document.getElementById("emp-role");
+    sel.innerHTML = roles.map(r => `<option value="${r.value}">${r.label}</option>`).join("");
+  }
+
+  // Mostra info do cargo
+  const roleInfo = document.getElementById("employees-role-info");
+  const btnAdd   = document.getElementById("btn-add-employee");
+  if (employee && employee.role === "manager") {
+    roleInfo.textContent = "Gerente: você pode cadastrar funcionários";
+    btnAdd.textContent   = "+ Novo Funcionário";
+  } else {
+    roleInfo.textContent = "";
+    btnAdd.textContent   = "+ Novo";
+  }
+
+  const { status, body } = await http.getEmployees();
+  el.innerHTML = "";
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar</div>`; return; }
+
+  if (!body.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><p>Nenhum funcionário cadastrado</p></div>`;
+    return;
+  }
+
+  const ROLE_LABELS = { admin:"Administrador", manager:"Gerente", attendant:"Funcionário" };
+  const ROLE_COLORS = { admin:"var(--primary)", manager:"var(--info)", attendant:"var(--text-muted)" };
+
+  body.forEach(emp => {
+    const card = document.createElement("div");
+    card.className = "order-card";
+    const isSelf  = emp.id === (employee && employee.id);
+    const canEdit = employee && (employee.role === "admin" ||
+                    (employee.role === "manager" && emp.role === "attendant"));
+
+    card.innerHTML = `
+      <div class="order-card-header">
+        <div>
+          <div class="order-card-title">${escHtml(emp.name || "Sem nome")}</div>
+          <div class="text-muted" style="font-size:12px;">${escHtml(emp.email)}</div>
+        </div>
+        <div style="text-align:right;">
+          <span class="badge" style="background:rgba(255,255,255,.1);color:${ROLE_COLORS[emp.role]||'var(--text-muted)'}">
+            ${ROLE_LABELS[emp.role]||emp.role}
+          </span>
+          ${isSelf ? `<div class="text-muted" style="font-size:10px;margin-top:2px;">Você</div>` : ""}
+        </div>
+      </div>
+      ${canEdit && !isSelf ? `
+      <div class="order-card-actions" style="margin-top:8px;">
+        <button class="btn btn-info btn-sm"    onclick="editEmployee(${JSON.stringify(emp).replace(/"/g,'&quot;')})">✏️ Editar</button>
+        <button class="btn btn-danger btn-sm"  onclick="removeEmployee(${emp.id},'${escHtml(emp.name||emp.email)}')">🗑 Remover</button>
+      </div>` : ""}
+    `;
+    el.appendChild(card);
+  });
+}
+
+function openAddEmployee() {
+  document.getElementById("employee-modal-title").textContent = "Novo Funcionário";
+  document.getElementById("employee-edit-id").value = "";
+  document.getElementById("emp-name").value     = "";
+  document.getElementById("emp-email").value    = "";
+  document.getElementById("emp-password").value = "";
+  document.getElementById("emp-role").value     = "attendant";
+  document.getElementById("emp-error").classList.add("hidden");
+  document.getElementById("emp-pwd-hint").textContent = "(mín. 6 caracteres)";
+  document.getElementById("btn-save-employee").textContent = "Cadastrar Funcionário";
+  openModal("employee");
+}
+
+function editEmployee(emp) {
+  document.getElementById("employee-modal-title").textContent = "Editar Funcionário";
+  document.getElementById("employee-edit-id").value = emp.id;
+  document.getElementById("emp-name").value     = emp.name  || "";
+  document.getElementById("emp-email").value    = emp.email || "";
+  document.getElementById("emp-password").value = "";
+  document.getElementById("emp-role").value     = emp.role  || "attendant";
+  document.getElementById("emp-error").classList.add("hidden");
+  document.getElementById("emp-pwd-hint").textContent = "(deixe em branco para não alterar)";
+  document.getElementById("btn-save-employee").textContent = "Salvar Alterações";
+  openModal("employee");
+}
+
+async function saveEmployee() {
+  const id      = document.getElementById("employee-edit-id").value;
+  const name    = document.getElementById("emp-name").value.trim();
+  const email   = document.getElementById("emp-email").value.trim();
+  const pwd     = document.getElementById("emp-password").value;
+  const role    = document.getElementById("emp-role").value;
+  const errEl   = document.getElementById("emp-error");
+  errEl.classList.add("hidden");
+
+  if (!email) { errEl.textContent = "E-mail é obrigatório"; errEl.classList.remove("hidden"); return; }
+  if (!id && !pwd) { errEl.textContent = "Senha é obrigatória para novo funcionário"; errEl.classList.remove("hidden"); return; }
+  if (pwd && pwd.length < 6) { errEl.textContent = "Senha deve ter ao menos 6 caracteres"; errEl.classList.remove("hidden"); return; }
+
+  const data = { name, email, role };
+  if (pwd) data.password = pwd;
+
+  const btn = document.getElementById("btn-save-employee");
+  btn.disabled = true; btn.textContent = "Salvando...";
+
+  const { status, body } = id
+    ? await http.updateEmployee(id, data)
+    : await http.createEmployee(data);
+
+  btn.disabled = false;
+  btn.textContent = id ? "Salvar Alterações" : "Cadastrar Funcionário";
+
+  if (status === 200 || status === 201) {
+    closeModal("employee");
+    toast(id ? "Funcionário atualizado!" : "Funcionário cadastrado!", "success");
+    loadEmployees();
+  } else {
+    errEl.textContent = body.error || "Erro ao salvar";
+    errEl.classList.remove("hidden");
+  }
+}
+
+async function removeEmployee(id, name) {
+  if (!confirm(`Desativar funcionário "${name}"?`)) return;
+  const { status, body } = await http.deleteEmployee(id);
+  if (status === 200) { toast("Funcionário desativado", "success"); loadEmployees(); }
+  else toast(body.error || "Erro ao remover", "error");
+}
+
+// ═════════════════════════════════════════════════════════════
+// ABA CONTA BANCÁRIA
+// ═════════════════════════════════════════════════════════════
+async function loadBankAccount() {
+  const el = document.getElementById("bankaccount-content");
+  el.innerHTML = spinner();
+  const { status, body } = await http.getBankAccount();
+
+  if (status !== 200) {
+    el.innerHTML = `<div class="alert alert-danger">Erro ao carregar</div>`;
+    return;
+  }
+
+  const b   = body.bank_account || {};
+  const fee = body.platform_fee_percent || 10;
+
+  el.innerHTML = `
+    <div class="card mb-12">
+      <div class="flex-between mb-8">
+        <div>
+          <div class="fw-bold" style="font-size:15px;">💰 Split de Pagamento</div>
+          <div class="text-muted" style="font-size:12px;">Como cada pagamento é dividido</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--danger)">${fee}%</div>
+          <div class="stat-label">Taxa da plataforma</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--success)">${100-fee}%</div>
+          <div class="stat-label">Seu recebimento</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-12">
+      <div class="fw-bold mb-12" style="font-size:15px;">🏦 Dados Bancários para Recebimento</div>
+      <p class="text-muted mb-12" style="font-size:13px;">
+        Configure sua conta para receber pagamentos via Mercado Pago ou PIX.
+      </p>
+
+      <!-- PIX -->
+      <div class="fw-bold mb-8" style="font-size:13px;color:var(--primary);">📱 Chave PIX</div>
+      <div class="input-group">
+        <label>Tipo de chave</label>
+        <select id="ba-pix-type" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:none;border-radius:8px;padding:12px 14px;font-size:15px;">
+          <option value="">Selecione...</option>
+          <option value="cpf"    ${b.pix_key_type==="cpf"?"selected":""}>CPF</option>
+          <option value="cnpj"   ${b.pix_key_type==="cnpj"?"selected":""}>CNPJ</option>
+          <option value="email"  ${b.pix_key_type==="email"?"selected":""}>E-mail</option>
+          <option value="phone"  ${b.pix_key_type==="phone"?"selected":""}>Telefone</option>
+          <option value="random" ${b.pix_key_type==="random"?"selected":""}>Chave aleatória</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Chave PIX</label>
+        <input type="text" id="ba-pix-key" placeholder="Digite sua chave PIX" value="${escHtml(b.pix_key||'')}">
+      </div>
+
+      <!-- Mercado Pago -->
+      <div class="fw-bold mb-8 mt-8" style="font-size:13px;color:var(--primary);">💳 Mercado Pago (para split automático)</div>
+      <div class="alert alert-warning mb-8" style="font-size:12px;">
+        Para receber automaticamente com split, cadastre seu Access Token do Mercado Pago.
+        <a href="https://www.mercadopago.com.br/developers/pt/docs" target="_blank" style="color:var(--primary);">Ver documentação →</a>
+      </div>
+      <div class="input-group">
+        <label>Access Token MP</label>
+        <input type="password" id="ba-mp-token" placeholder="APP_USR-..." value="${escHtml(b.mp_access_token||'')}">
+      </div>
+      <div class="input-group">
+        <label>Public Key MP</label>
+        <input type="text" id="ba-mp-pubkey" placeholder="APP_USR-..." value="${escHtml(b.mp_public_key||'')}">
+      </div>
+      <div class="input-group">
+        <label>Collector ID (ID do recebedor)</label>
+        <input type="text" id="ba-mp-collector" placeholder="Ex: 12345678" value="${escHtml(b.mp_collector_id||'')}">
+      </div>
+
+      <!-- Dados bancários -->
+      <div class="fw-bold mb-8 mt-8" style="font-size:13px;color:var(--primary);">🏦 Dados bancários</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="input-group"><label>Banco</label><input type="text" id="ba-bank-name" placeholder="Ex: Itaú, Nubank" value="${escHtml(b.bank_name||'')}"></div>
+        <div class="input-group"><label>Código banco</label><input type="text" id="ba-bank-code" placeholder="Ex: 341" value="${escHtml(b.bank_code||'')}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="input-group"><label>Agência</label><input type="text" id="ba-agency" placeholder="0001" value="${escHtml(b.bank_agency||'')}"></div>
+        <div class="input-group"><label>Conta</label><input type="text" id="ba-account" placeholder="12345-6" value="${escHtml(b.bank_account||'')}"></div>
+      </div>
+      <div class="input-group">
+        <label>Tipo de conta</label>
+        <select id="ba-account-type" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:none;border-radius:8px;padding:12px 14px;font-size:15px;">
+          <option value="checking" ${b.bank_account_type==="checking"?"selected":""}>Conta Corrente</option>
+          <option value="savings"  ${b.bank_account_type==="savings"?"selected":""}>Conta Poupança</option>
+        </select>
+      </div>
+      <div class="input-group"><label>Nome do titular</label><input type="text" id="ba-holder-name" placeholder="Nome completo" value="${escHtml(b.bank_holder_name||'')}"></div>
+      <div class="input-group"><label>CPF/CNPJ do titular</label><input type="text" id="ba-holder-doc" placeholder="000.000.000-00" value="${escHtml(b.bank_holder_document||'')}"></div>
+
+      <div id="bank-save-error" class="alert alert-danger hidden"></div>
+      <button class="btn btn-primary" onclick="saveBankAccount()">💾 Salvar Dados Bancários</button>
+    </div>
+  `;
+}
+
+async function saveBankAccount() {
+  const errEl = document.getElementById("bank-save-error");
+  errEl.classList.add("hidden");
+
+  const data = {
+    pix_key_type:        document.getElementById("ba-pix-type").value      || null,
+    pix_key:             document.getElementById("ba-pix-key").value.trim() || null,
+    mp_access_token:     document.getElementById("ba-mp-token").value.trim() || null,
+    mp_public_key:       document.getElementById("ba-mp-pubkey").value.trim()|| null,
+    mp_collector_id:     document.getElementById("ba-mp-collector").value.trim()|| null,
+    bank_name:           document.getElementById("ba-bank-name").value.trim()|| null,
+    bank_code:           document.getElementById("ba-bank-code").value.trim()|| null,
+    bank_agency:         document.getElementById("ba-agency").value.trim()  || null,
+    bank_account:        document.getElementById("ba-account").value.trim() || null,
+    bank_account_type:   document.getElementById("ba-account-type").value,
+    bank_holder_name:    document.getElementById("ba-holder-name").value.trim()|| null,
+    bank_holder_document:document.getElementById("ba-holder-doc").value.trim() || null,
+  };
+
+  const { status, body } = await http.saveBankAccount(data);
+  if (status === 200) {
+    toast("Dados bancários salvos! ✓", "success");
+  } else {
+    errEl.textContent = body.error || "Erro ao salvar";
+    errEl.classList.remove("hidden");
+  }
+}
+
+
+// ── Init ──────────────────────────────────────────────────────
+(function init() {
+  initReport();
+  if (http._employeeToken) {
+    http.getDashboard().then(({ status }) => {
+      if (status === 200) showPanel();
+      else http.clearEmployee();
+    });
+  }
+})();
+</script>
+</body>
+</html>
