@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+*.log
+.env
+.env.local
+easyfood.db
+apk_projects/
+database/
+iniciar.py
+run_server.py
