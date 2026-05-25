@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+.git
+*.md
+apk_projects/
+database/
+iniciar.py
+migrar.py
+limpar_duplicatas.py
+nixpacks.toml

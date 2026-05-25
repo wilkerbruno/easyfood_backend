@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = []
-
-[phases.install]
-cmds = ["pip install -r requirements.txt"]
-
-[start]
-cmd = "gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 wsgi:app"
