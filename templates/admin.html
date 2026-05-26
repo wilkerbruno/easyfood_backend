@@ -194,6 +194,44 @@
       <div class="input-group"><label>Senha do Admin</label><input type="password" id="rest-admin-pwd" placeholder="Mínimo 6 caracteres"></div>
     </div>
 
+    <div style="height:1px;background:rgba(255,255,255,.08);margin:14px 0;"></div>
+    <p class="text-primary fw-bold mb-4" style="font-size:13px;">💳 Dados Bancários para Recebimento</p>
+    <p class="text-muted mb-8" style="font-size:12px;">O restaurante receberá os pagamentos nesta conta</p>
+
+    <div class="input-group">
+      <label>Tipo de Chave PIX</label>
+      <select id="rest-pix-type" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:none;border-radius:8px;padding:12px 14px;font-size:15px;">
+        <option value="">Selecione...</option>
+        <option value="cpf">CPF</option>
+        <option value="cnpj">CNPJ</option>
+        <option value="email">E-mail</option>
+        <option value="phone">Telefone</option>
+        <option value="random">Chave Aleatória</option>
+      </select>
+    </div>
+    <div class="input-group"><label>Chave PIX</label><input type="text" id="rest-pix-key" placeholder="Ex: 00.000.000/0000-00 ou email@banco.com"></div>
+
+    <div style="height:1px;background:rgba(255,255,255,.06);margin:10px 0;"></div>
+    <p class="text-muted mb-8" style="font-size:12px;">Ou dados bancários tradicionais</p>
+    <div class="form-grid">
+      <div class="input-group"><label>Banco</label><input type="text" id="rest-bank-name" placeholder="Ex: Itaú, Bradesco, Nubank..."></div>
+      <div class="input-group"><label>Agência</label><input type="text" id="rest-bank-agency" placeholder="Ex: 0001"></div>
+    </div>
+    <div class="form-grid">
+      <div class="input-group"><label>Conta</label><input type="text" id="rest-bank-account" placeholder="Ex: 12345-6"></div>
+      <div class="input-group">
+        <label>Tipo de Conta</label>
+        <select id="rest-bank-type" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:none;border-radius:8px;padding:12px 14px;font-size:15px;">
+          <option value="">Selecione...</option>
+          <option value="corrente">Conta Corrente</option>
+          <option value="poupanca">Conta Poupança</option>
+          <option value="pagamento">Conta de Pagamento</option>
+        </select>
+      </div>
+    </div>
+    <div class="input-group"><label>Nome do Titular</label><input type="text" id="rest-bank-holder" placeholder="Nome completo do titular"></div>
+    <div class="input-group"><label>CPF/CNPJ do Titular</label><input type="text" id="rest-bank-doc" placeholder="Documento do titular da conta"></div>
+
     <div id="rest-error" class="alert alert-danger hidden"></div>
     <button class="btn btn-primary mt-8" onclick="saveRestaurant()" id="btn-save-rest">Salvar Restaurante</button>
   </div>
@@ -660,6 +698,16 @@ async function saveRestaurant() {
     data.admin_email    = document.getElementById("rest-admin-email").value.trim();
     data.admin_password = document.getElementById("rest-admin-pwd").value;
     data.admin_name     = document.getElementById("rest-admin-name").value.trim();
+
+    // Dados bancários
+    data.pix_key_type          = document.getElementById("rest-pix-type").value || null;
+    data.pix_key               = document.getElementById("rest-pix-key").value.trim() || null;
+    data.bank_name             = document.getElementById("rest-bank-name").value.trim() || null;
+    data.bank_agency           = document.getElementById("rest-bank-agency").value.trim() || null;
+    data.bank_account          = document.getElementById("rest-bank-account").value.trim() || null;
+    data.bank_account_type     = document.getElementById("rest-bank-type").value || null;
+    data.bank_holder_name      = document.getElementById("rest-bank-holder").value.trim() || null;
+    data.bank_holder_document  = document.getElementById("rest-bank-doc").value.trim() || null;
   }
 
   const btn = document.getElementById("btn-save-rest");

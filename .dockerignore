@@ -1,6 +1,8 @@
 __pycache__
 *.pyc
+*.pyo
 .git
+.gitignore
 *.md
 apk_projects/
 database/

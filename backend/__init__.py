@@ -28,7 +28,7 @@ def create_app(env: str = "development") -> Flask:
     # Extensoes
     db.init_app(app)
     JWTManager(app)
-    CORS(app, origins="*", supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     # API Blueprints
     from backend.routes.customer   import customer_bp

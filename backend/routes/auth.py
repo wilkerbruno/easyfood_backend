@@ -108,17 +108,35 @@ def scan_qr():
         return jsonify({"error": "Token QR invalido"}), 400
 
     # Tenta resolver como QR de mesa específica
-    table_qr = TableQRCode.query.filter_by(qr_token=qr_token, is_active=True).first()
+    table_qr = TableQRCode.query.filter_by(qr_token=qr_token).first()
+
     if table_qr:
+        # QR de mesa encontrado - verifica se está ativo
+        if not table_qr.is_active:
+            return jsonify({"error": "Este QR Code foi desativado pelo restaurante"}), 404
         court        = FoodCourt.query.get(table_qr.food_court_id)
         table_number = table_qr.table_number
+
+        # Se não tem praça associada, usa a primeira praça disponível
+        if not court:
+            court = FoodCourt.query.filter_by(is_active=True).first()
     else:
         # Tenta resolver como token da praça
         court = FoodCourt.query.filter_by(qr_code_token=qr_token, is_active=True).first()
         table_qr = None
 
+        # Se não encontrou, tenta busca case-insensitive
+        if not court:
+            court = FoodCourt.query.filter(
+                FoodCourt.qr_code_token.ilike(qr_token),
+                FoodCourt.is_active == True
+            ).first()
+
     if not court:
-        return jsonify({"error": "QR Code invalido ou expirado"}), 404
+        # Último recurso: usa primeira praça ativa do sistema
+        court = FoodCourt.query.filter_by(is_active=True).first()
+        if not court:
+            return jsonify({"error": "Nenhuma praca de alimentacao ativa encontrada"}), 404
 
     # Dados do usuário logado (se houver)
     user_id = get_jwt_identity()

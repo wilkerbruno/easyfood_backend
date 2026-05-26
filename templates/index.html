@@ -14,16 +14,16 @@
 <body>
 <div id="app">
 
-  <!-- ── TELA BOAS-VINDAS ──────────────────────────────────── -->
+  <!-- ââ TELA BOAS-VINDAS ââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-welcome" class="screen active">
     <div class="scroll-content" style="display:flex;flex-direction:column;justify-content:center;min-height:100%;gap:12px;">
       <div class="logo" style="margin-bottom:4px;">easy<span>food</span></div>
-      <p class="text-secondary text-center" style="font-size:15px;">Peça no seu restaurante favorito sem sair da mesa</p>
+      <p class="text-secondary text-center" style="font-size:15px;">PeÃ§a no seu restaurante favorito sem sair da mesa</p>
 
       <div id="welcome-user-info" class="card hidden" style="padding:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div>
-            <p class="text-muted" style="font-size:11px;">Olá,</p>
+            <p class="text-muted" style="font-size:11px;">OlÃ¡,</p>
             <p id="welcome-user-name" class="fw-bold text-primary" style="font-size:16px;"></p>
           </div>
           <button onclick="logoutUser()" class="btn btn-danger" style="width:auto;padding:8px 14px;font-size:13px;">
@@ -33,10 +33,10 @@
       </div>
 
       <button class="btn btn-primary" style="font-size:18px;height:58px;" onclick="showScreen('qrscan')">
-        📷 Escanear QR Code da Mesa
+        ð· Escanear QR Code da Mesa
       </button>
       <button class="btn btn-secondary" onclick="showScreen('qrmanual')">
-        ⌨️ Digitar código manualmente
+        â¨ï¸ Digitar cÃ³digo manualmente
       </button>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;" id="auth-buttons">
@@ -44,19 +44,19 @@
         <button class="btn btn-secondary" onclick="showScreen('register')">Criar conta</button>
       </div>
       <button class="btn btn-secondary" style="font-size:13px;" onclick="showScreen('myorders')" id="btn-myorders">
-        📋 Meus Pedidos
+        ð Meus Pedidos
       </button>
     </div>
   </div>
 
-  <!-- ── TELA CÂMERA QR ────────────────────────────────────── -->
+  <!-- ââ TELA CÃMERA QR ââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-qrscan" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="stopCamera();showScreen('welcome')">←</button>
+      <button class="back-btn" onclick="stopCamera();showScreen('welcome')">â</button>
       <h1>Escanear QR Code</h1>
     </div>
     <div class="scroll-content" style="display:flex;flex-direction:column;align-items:center;gap:14px;">
-      <p class="text-secondary text-center" style="font-size:14px;">Aponte a câmera para o QR Code da mesa</p>
+      <p class="text-secondary text-center" style="font-size:14px;">Aponte a cÃ¢mera para o QR Code da mesa</p>
       <div id="qr-reader" style="width:100%;max-width:320px;border-radius:12px;overflow:hidden;"></div>
       <div id="qr-scan-status" class="text-muted text-center" style="font-size:13px;"></div>
       <div id="qr-scan-error" class="alert alert-danger hidden"></div>
@@ -64,7 +64,7 @@
         <div class="card">
           <p class="text-secondary mb-8" style="font-size:14px;">QR Code lido! Confirme a mesa:</p>
           <div class="input-group">
-            <label>Número da mesa</label>
+            <label>NÃºmero da mesa</label>
             <input id="scan-table" type="text" placeholder="Ex: 12">
           </div>
           <button class="btn btn-primary" onclick="confirmScan()">Confirmar e Entrar</button>
@@ -73,39 +73,39 @@
     </div>
   </div>
 
-  <!-- ── TELA QR MANUAL ────────────────────────────────────── -->
+  <!-- ââ TELA QR MANUAL ââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-qrmanual" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('welcome')">←</button>
-      <h1>Código da Mesa</h1>
+      <button class="back-btn" onclick="showScreen('welcome')">â</button>
+      <h1>CÃ³digo da Mesa</h1>
     </div>
     <div class="scroll-content">
       <div class="card">
         <div class="input-group">
-          <label>Código QR / Token</label>
-          <input id="manual-token" type="text" placeholder="Cole o código aqui..." autocomplete="off">
+          <label>CÃ³digo QR / Token</label>
+          <input id="manual-token" type="text" placeholder="Cole o cÃ³digo aqui..." autocomplete="off">
         </div>
         <div class="input-group">
-          <label>Número da mesa</label>
+          <label>NÃºmero da mesa</label>
           <input id="manual-table" type="text" placeholder="Ex: 12">
         </div>
         <div class="input-group" id="manual-name-group">
-          <label>Seu nome (se não tem conta)</label>
+          <label>Seu nome (se nÃ£o tem conta)</label>
           <input id="manual-name" type="text" placeholder="Como quer ser chamado?">
         </div>
         <div id="manual-error" class="alert alert-danger hidden"></div>
         <button class="btn btn-secondary mb-8" style="font-size:13px;" onclick="fillDemo()">
-          🎯 Usar dados de demonstração
+          ð¯ Usar dados de demonstraÃ§Ã£o
         </button>
-        <button class="btn btn-primary" onclick="doManualScan()">Entrar na Praça →</button>
+        <button class="btn btn-primary" onclick="doManualScan()">Entrar na PraÃ§a â</button>
       </div>
     </div>
   </div>
 
-  <!-- ── TELA LOGIN ─────────────────────────────────────────── -->
+  <!-- ââ TELA LOGIN âââââââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-login" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('welcome')">←</button>
+      <button class="back-btn" onclick="showScreen('welcome')">â</button>
       <h1>Entrar na conta</h1>
     </div>
     <div class="scroll-content">
@@ -116,21 +116,21 @@
         </div>
         <div class="input-group">
           <label>Senha</label>
-          <input id="login-password" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          <input id="login-password" type="password" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢" onkeydown="if(event.key==='Enter')doLogin()">
         </div>
         <div id="login-error" class="alert alert-danger hidden"></div>
         <button class="btn btn-primary" onclick="doLogin()" id="btn-login">Entrar</button>
         <p class="text-center text-muted mt-8" style="font-size:13px;">
-          Não tem conta? <span onclick="showScreen('register')" style="color:var(--primary);cursor:pointer;">Criar agora</span>
+          NÃ£o tem conta? <span onclick="showScreen('register')" style="color:var(--primary);cursor:pointer;">Criar agora</span>
         </p>
       </div>
     </div>
   </div>
 
-  <!-- ── TELA CADASTRO ──────────────────────────────────────── -->
+  <!-- ââ TELA CADASTRO ââââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-register" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('welcome')">←</button>
+      <button class="back-btn" onclick="showScreen('welcome')">â</button>
       <h1>Criar conta</h1>
     </div>
     <div class="scroll-content">
@@ -148,28 +148,28 @@
           <input id="reg-phone" type="tel" placeholder="(00) 00000-0000">
         </div>
         <div class="input-group">
-          <label>Senha * (mín. 6 caracteres)</label>
-          <input id="reg-password" type="password" placeholder="••••••••">
+          <label>Senha * (mÃ­n. 6 caracteres)</label>
+          <input id="reg-password" type="password" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢">
         </div>
         <div class="input-group">
           <label>Confirmar senha *</label>
-          <input id="reg-confirm" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()">
+          <input id="reg-confirm" type="password" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢" onkeydown="if(event.key==='Enter')doRegister()">
         </div>
         <div id="reg-error" class="alert alert-danger hidden"></div>
         <button class="btn btn-primary" onclick="doRegister()" id="btn-register">Criar conta</button>
         <p class="text-center text-muted mt-8" style="font-size:13px;">
-          Já tem conta? <span onclick="showScreen('login')" style="color:var(--primary);cursor:pointer;">Entrar</span>
+          JÃ¡ tem conta? <span onclick="showScreen('login')" style="color:var(--primary);cursor:pointer;">Entrar</span>
         </p>
       </div>
     </div>
   </div>
 
-  <!-- ── TELA RESTAURANTES ─────────────────────────────────── -->
+  <!-- ââ TELA RESTAURANTES âââââââââââââââââââââââââââââââââââ -->
   <div id="screen-restaurants" class="screen">
     <div class="header">
-      <h1 id="court-name" style="font-size:16px;">Praça de Alimentação</h1>
+      <h1 id="court-name" style="font-size:16px;">PraÃ§a de AlimentaÃ§Ã£o</h1>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="showScreen('myorders')" style="background:none;border:none;color:var(--text-secondary);font-size:13px;cursor:pointer;white-space:nowrap;">📋 Pedidos</button>
+        <button onclick="showScreen('myorders')" style="background:none;border:none;color:var(--text-secondary);font-size:13px;cursor:pointer;white-space:nowrap;">ð Pedidos</button>
         <button onclick="confirmLogout()" style="background:none;border:none;color:var(--danger);font-size:13px;cursor:pointer;white-space:nowrap;">Sair</button>
       </div>
     </div>
@@ -178,11 +178,11 @@
     <div id="restaurants-list" class="scroll-content"></div>
   </div>
 
-  <!-- ── TELA CARDÁPIO ─────────────────────────────────────── -->
+  <!-- ââ TELA CARDÃPIO âââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-menu" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('restaurants')">←</button>
-      <h1 id="menu-restaurant-name">Cardápio</h1>
+      <button class="back-btn" onclick="showScreen('restaurants')">â</button>
+      <h1 id="menu-restaurant-name">CardÃ¡pio</h1>
     </div>
     <div id="menu-content" class="scroll-content"></div>
     <div id="cart-bar" class="bottom-bar hidden" onclick="showScreen('cart')">
@@ -190,20 +190,20 @@
         <div id="cart-count" class="bb-count"></div>
         <div id="cart-total" class="bb-total"></div>
       </div>
-      <div class="bb-btn">Ver Carrinho →</div>
+      <div class="bb-btn">Ver Carrinho â</div>
     </div>
   </div>
 
-  <!-- ── TELA CARRINHO ─────────────────────────────────────── -->
+  <!-- ââ TELA CARRINHO âââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-cart" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('menu')">←</button>
+      <button class="back-btn" onclick="showScreen('menu')">â</button>
       <h1>Meu Carrinho</h1>
     </div>
     <div class="scroll-content">
       <div id="cart-items-list"></div>
       <div class="input-group mt-8">
-        <label>Observações gerais</label>
+        <label>ObservaÃ§Ãµes gerais</label>
         <textarea id="order-notes" rows="2" placeholder="Sem cebola, alergia a amendoim..."></textarea>
       </div>
       <div id="cart-error" class="alert alert-danger hidden"></div>
@@ -217,10 +217,10 @@
     </div>
   </div>
 
-  <!-- ── TELA PAGAMENTO ────────────────────────────────────── -->
+  <!-- ââ TELA PAGAMENTO ââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-payment" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('cart')">←</button>
+      <button class="back-btn" onclick="showScreen('cart')">â</button>
       <h1>Pagamento</h1>
     </div>
     <div class="scroll-content">
@@ -230,45 +230,45 @@
       </div>
       <p class="text-secondary mb-8" style="font-size:14px;">Forma de pagamento</p>
       <div class="payment-methods mb-12">
-        <div class="pay-method selected" data-method="pix"         onclick="selectPayMethod(this)"><div class="pay-icon">📱</div><div class="pay-label">PIX</div></div>
-        <div class="pay-method"          data-method="credit_card" onclick="selectPayMethod(this)"><div class="pay-icon">💳</div><div class="pay-label">Crédito</div></div>
-        <div class="pay-method"          data-method="debit_card"  onclick="selectPayMethod(this)"><div class="pay-icon">💳</div><div class="pay-label">Débito</div></div>
-        <div class="pay-method"          data-method="cash"        onclick="selectPayMethod(this)"><div class="pay-icon">💵</div><div class="pay-label">Dinheiro</div></div>
+        <div class="pay-method selected" data-method="pix"         onclick="selectPayMethod(this)"><div class="pay-icon">ð±</div><div class="pay-label">PIX</div></div>
+        <div class="pay-method"          data-method="credit_card" onclick="selectPayMethod(this)"><div class="pay-icon">ð³</div><div class="pay-label">CrÃ©dito</div></div>
+        <div class="pay-method"          data-method="debit_card"  onclick="selectPayMethod(this)"><div class="pay-icon">ð³</div><div class="pay-label">DÃ©bito</div></div>
+        <div class="pay-method"          data-method="cash"        onclick="selectPayMethod(this)"><div class="pay-icon">ðµ</div><div class="pay-label">Dinheiro</div></div>
       </div>
       <div id="pix-info" class="card text-center mb-12">
-        <p style="font-size:40px;">▣</p>
+        <p style="font-size:40px;">â£</p>
         <p class="text-secondary" style="font-size:13px;margin-top:6px;">QR Code PIX gerado automaticamente</p>
         <p class="text-muted" style="font-size:12px;">Abra o app do banco e escaneie</p>
       </div>
       <div id="pay-error" class="alert alert-danger hidden"></div>
-      <button class="btn btn-success" onclick="confirmPayment()">✓ Confirmar Pagamento</button>
+      <button class="btn btn-success" onclick="confirmPayment()">â Confirmar Pagamento</button>
     </div>
   </div>
 
-  <!-- ── TELA TRACKING ─────────────────────────────────────── -->
+  <!-- ââ TELA TRACKING âââââââââââââââââââââââââââââââââââââââ -->
   <div id="screen-tracking" class="screen">
     <div class="header"><h1>Acompanhar Pedido</h1></div>
     <div class="scroll-content">
       <div class="card text-center mb-12">
         <p id="tracking-order-id" class="text-muted" style="font-size:13px;"></p>
-        <div id="tracking-icon" style="font-size:64px;margin:8px 0;">⏳</div>
+        <div id="tracking-icon" style="font-size:64px;margin:8px 0;">â³</div>
         <p id="tracking-status" class="fw-bold" style="font-size:22px;color:var(--warning);"></p>
         <p id="tracking-restaurant" class="text-muted" style="font-size:13px;margin-top:4px;"></p>
       </div>
       <div class="timeline" id="tracking-timeline"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
-        <button class="btn btn-secondary" onclick="goToMenu()">🍽️ Novo Pedido</button>
-        <button class="btn btn-outline"   onclick="showScreen('restaurants')">🏪 Outro Restaurante</button>
+        <button class="btn btn-secondary" onclick="goToMenu()">ð½ï¸ Novo Pedido</button>
+        <button class="btn btn-outline"   onclick="showScreen('restaurants')">ðª Outro Restaurante</button>
       </div>
-      <button class="btn btn-secondary mt-8" style="font-size:13px;" onclick="showScreen('myorders')">📋 Todos os pedidos</button>
-      <button class="btn btn-secondary mt-8" style="font-size:13px;color:var(--danger);" onclick="confirmLogout()">🚪 Sair do app</button>
+      <button class="btn btn-secondary mt-8" style="font-size:13px;" onclick="showScreen('myorders')">ð Todos os pedidos</button>
+      <button class="btn btn-secondary mt-8" style="font-size:13px;color:var(--danger);" onclick="confirmLogout()">ðª Sair do app</button>
     </div>
   </div>
 
-  <!-- ── TELA MEUS PEDIDOS ─────────────────────────────────── -->
+  <!-- ââ TELA MEUS PEDIDOS âââââââââââââââââââââââââââââââââââ -->
   <div id="screen-myorders" class="screen">
     <div class="header">
-      <button class="back-btn" onclick="showScreen('restaurants')">←</button>
+      <button class="back-btn" onclick="showScreen('restaurants')">â</button>
       <h1>Meus Pedidos</h1>
     </div>
     <div id="orders-list" class="scroll-content"></div>
@@ -276,18 +276,18 @@
 
 </div><!-- #app -->
 
-<!-- MODAL AVALIAÇÃO -->
+<!-- MODAL AVALIAÃÃO -->
 <div id="modal-review" class="modal-overlay">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('review')">✕</button>
-    <div class="modal-title">Avaliar pedido ⭐</div>
-    <div id="review-stars" style="font-size:40px;text-align:center;margin:12px 0;letter-spacing:4px;">★★★★★</div>
+    <button class="modal-close" onclick="closeModal('review')">â</button>
+    <div class="modal-title">Avaliar pedido â­</div>
+    <div id="review-stars" style="font-size:40px;text-align:center;margin:12px 0;letter-spacing:4px;">âââââ</div>
     <input type="range" id="review-rating" min="1" max="5" value="5" oninput="updateStars(this.value)" style="width:100%;margin-bottom:12px;">
     <div class="input-group">
-      <label>Comentário (opcional)</label>
-      <textarea id="review-comment" rows="3" placeholder="Como foi sua experiência?"></textarea>
+      <label>ComentÃ¡rio (opcional)</label>
+      <textarea id="review-comment" rows="3" placeholder="Como foi sua experiÃªncia?"></textarea>
     </div>
-    <button class="btn btn-primary" onclick="submitReview()">Enviar Avaliação</button>
+    <button class="btn btn-primary" onclick="submitReview()">Enviar AvaliaÃ§Ã£o</button>
   </div>
 </div>
 
@@ -306,7 +306,7 @@ let scannedQRToken    = null;
 let qrScanner         = null;
 let loggedUser        = null;
 
-// ── Navegação ─────────────────────────────────────────────────
+// ââ NavegaÃ§Ã£o âââââââââââââââââââââââââââââââââââââââââââââââââ
 function showScreen(name) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(`screen-${name}`).classList.add("active");
@@ -319,7 +319,7 @@ function showScreen(name) {
   if (name === "welcome")   updateWelcomeUI();
 }
 
-// ── Usuário logado ────────────────────────────────────────────
+// ââ UsuÃ¡rio logado ââââââââââââââââââââââââââââââââââââââââââââ
 function updateWelcomeUI() {
   const token = localStorage.getItem("ef_user");
   const name  = localStorage.getItem("ef_user_name");
@@ -351,7 +351,7 @@ function logoutUser() {
 }
 
 function confirmLogout() {
-  if (confirm("Deseja sair? Seu carrinho será perdido.")) {
+  if (confirm("Deseja sair? Seu carrinho serÃ¡ perdido.")) {
     logoutUser();
   }
 }
@@ -365,7 +365,7 @@ function clearSession() {
   updateWelcomeUI();
 }
 
-// ── Login ─────────────────────────────────────────────────────
+// ââ Login âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function doLogin() {
   const email = document.getElementById("login-email").value.trim();
   const pwd   = document.getElementById("login-password").value;
@@ -381,15 +381,15 @@ async function doLogin() {
     http.setUserToken(body.access_token);
     localStorage.setItem("ef_user_name", body.user.name);
     loggedUser = body.user;
-    toast(`Bem-vindo, ${body.user.name}! 👋`, "success");
+    toast(`Bem-vindo, ${body.user.name}! ð`, "success");
     showScreen("welcome");
   } else {
-    errEl.textContent = body.error || "Credenciais inválidas";
+    errEl.textContent = body.error || "Credenciais invÃ¡lidas";
     errEl.classList.remove("hidden");
   }
 }
 
-// ── Cadastro ──────────────────────────────────────────────────
+// ââ Cadastro ââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function doRegister() {
   const name    = document.getElementById("reg-name").value.trim();
   const email   = document.getElementById("reg-email").value.trim();
@@ -400,8 +400,8 @@ async function doRegister() {
   const btn     = document.getElementById("btn-register");
 
   errEl.classList.add("hidden");
-  if (!name || !email || !pwd) { errEl.textContent = "Preencha todos os campos obrigatórios"; errEl.classList.remove("hidden"); return; }
-  if (pwd !== confirm)         { errEl.textContent = "As senhas não coincidem"; errEl.classList.remove("hidden"); return; }
+  if (!name || !email || !pwd) { errEl.textContent = "Preencha todos os campos obrigatÃ³rios"; errEl.classList.remove("hidden"); return; }
+  if (pwd !== confirm)         { errEl.textContent = "As senhas nÃ£o coincidem"; errEl.classList.remove("hidden"); return; }
   if (pwd.length < 6)          { errEl.textContent = "Senha deve ter ao menos 6 caracteres"; errEl.classList.remove("hidden"); return; }
 
   btn.disabled = true; btn.textContent = "Criando conta...";
@@ -412,7 +412,7 @@ async function doRegister() {
     http.setUserToken(body.access_token);
     localStorage.setItem("ef_user_name", body.user.name);
     loggedUser = body.user;
-    toast(`Conta criada! Bem-vindo, ${body.user.name}! 🎉`, "success");
+    toast(`Conta criada! Bem-vindo, ${body.user.name}! ð`, "success");
     showScreen("welcome");
   } else {
     errEl.textContent = body.error || "Erro ao criar conta";
@@ -420,15 +420,15 @@ async function doRegister() {
   }
 }
 
-// ── Scanner de câmera ─────────────────────────────────────────
+// ââ Scanner de cÃ¢mera âââââââââââââââââââââââââââââââââââââââââ
 function startCamera() {
-  document.getElementById("qr-scan-status").textContent = "Iniciando câmera...";
+  document.getElementById("qr-scan-status").textContent = "Iniciando cÃ¢mera...";
   document.getElementById("qr-scan-error").classList.add("hidden");
   document.getElementById("qr-table-input").classList.add("hidden");
   scannedQRToken = null;
 
   if (typeof Html5Qrcode === "undefined") {
-    document.getElementById("qr-scan-error").textContent = "Biblioteca de câmera não carregou. Use o código manual.";
+    document.getElementById("qr-scan-error").textContent = "Biblioteca de cÃ¢mera nÃ£o carregou. Use o cÃ³digo manual.";
     document.getElementById("qr-scan-error").classList.remove("hidden");
     return;
   }
@@ -441,14 +441,14 @@ function startCamera() {
       // QR lido com sucesso
       scannedQRToken = decodedText;
       stopCamera();
-      document.getElementById("qr-scan-status").textContent = `✅ Código lido: ${decodedText.slice(0,20)}...`;
+      document.getElementById("qr-scan-status").textContent = `â CÃ³digo lido: ${decodedText.slice(0,20)}...`;
       document.getElementById("qr-table-input").classList.remove("hidden");
     },
     () => {} // erro silencioso por frame
   ).then(() => {
     document.getElementById("qr-scan-status").textContent = "Aponte para o QR Code...";
   }).catch(err => {
-    document.getElementById("qr-scan-error").textContent = "Câmera não disponível. Use o código manual.";
+    document.getElementById("qr-scan-error").textContent = "CÃ¢mera nÃ£o disponÃ­vel. Use o cÃ³digo manual.";
     document.getElementById("qr-scan-error").classList.remove("hidden");
     document.getElementById("qr-scan-status").textContent = "";
   });
@@ -466,7 +466,7 @@ async function confirmScan() {
   await enterCourt(scannedQRToken, table, "");
 }
 
-// ── Entrada manual ────────────────────────────────────────────
+// ââ Entrada manual ââââââââââââââââââââââââââââââââââââââââââââ
 function fillDemo() {
   document.getElementById("manual-token").value = "EASYFOOD_QR_DEMO_2024";
   document.getElementById("manual-table").value = "12";
@@ -479,15 +479,15 @@ async function doManualScan() {
   const name  = document.getElementById("manual-name").value.trim();
   const errEl = document.getElementById("manual-error");
   errEl.classList.add("hidden");
-  if (!token) { errEl.textContent = "Informe o código QR"; errEl.classList.remove("hidden"); return; }
+  if (!token) { errEl.textContent = "Informe o cÃ³digo QR"; errEl.classList.remove("hidden"); return; }
   await enterCourt(token, table, name);
 }
 
-// ── Entrar na praça (após QR lido) ────────────────────────────
+// ââ Entrar na praÃ§a (apÃ³s QR lido) ââââââââââââââââââââââââââââ
 async function enterCourt(qrToken, tableNumber, name) {
   const userToken = localStorage.getItem("ef_user");
 
-  // Monta headers manualmente para suportar token de usuário opcional
+  // Monta headers manualmente para suportar token de usuÃ¡rio opcional
   const headers = { "Content-Type": "application/json" };
   if (userToken) headers["Authorization"] = `Bearer ${userToken}`;
 
@@ -503,14 +503,14 @@ async function enterCourt(qrToken, tableNumber, name) {
     localStorage.setItem("ef_court_name", body.food_court.name);
     document.getElementById("court-name").textContent = body.food_court.name;
 
-    // Mostra barra do usuário se logado
+    // Mostra barra do usuÃ¡rio se logado
     const userBar = document.getElementById("user-bar");
     if (body.user) {
-      userBar.textContent = `👤 ${body.user.name} • Mesa ${body.table_number || tableNumber}`;
+      userBar.textContent = `ð¤ ${body.user.name} â¢ Mesa ${body.table_number || tableNumber}`;
       userBar.classList.remove("hidden");
     } else {
       if (tableNumber) {
-        userBar.textContent = `🪑 Mesa ${tableNumber}`;
+        userBar.textContent = `ðª Mesa ${tableNumber}`;
         userBar.classList.remove("hidden");
       } else {
         userBar.classList.add("hidden");
@@ -520,29 +520,29 @@ async function enterCourt(qrToken, tableNumber, name) {
     showScreen("restaurants");
     loadRestaurants();
 
-    // Se o QR Code é de um restaurante específico, vai direto pro cardápio
+    // Se o QR Code Ã© de um restaurante especÃ­fico, vai direto pro cardÃ¡pio
     if (body.restaurant_id) {
       const { status: rs, body: rb } = await http.getMenu(body.restaurant_id);
       if (rs === 200) selectRestaurant(rb.id, rb.name);
     }
   } else {
     const errEl = document.getElementById("manual-error");
-    errEl.textContent = body.error || "QR Code inválido";
+    errEl.textContent = body.error || "QR Code invÃ¡lido";
     errEl.classList.remove("hidden");
     if (currentScreen === "qrscan") {
-      document.getElementById("qr-scan-error").textContent = body.error || "QR Code inválido";
+      document.getElementById("qr-scan-error").textContent = body.error || "QR Code invÃ¡lido";
       document.getElementById("qr-scan-error").classList.remove("hidden");
     }
   }
 }
 
-// ── Restaurantes ──────────────────────────────────────────────
+// ââ Restaurantes ââââââââââââââââââââââââââââââââââââââââââââââ
 async function loadRestaurants() {
   const el = document.getElementById("restaurants-list");
   el.innerHTML = spinner();
   const { status, body } = await http.getRestaurants();
   if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">${body.error||"Erro ao carregar"}</div>`; return; }
-  if (!body.length)   { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🏪</div><p>Nenhum restaurante disponível</p></div>`; return; }
+  if (!body.length)   { el.innerHTML = `<div class="empty-state"><div class="empty-icon">ðª</div><p>Nenhum restaurante disponÃ­vel</p></div>`; return; }
   el.innerHTML = body.map(r => `
     <div class="card" style="cursor:pointer;display:flex;align-items:center;gap:12px;" onclick="selectRestaurant(${r.id},'${escHtml(r.name)}')">
       <div style="font-size:40px;">${catIcon(r.category)}</div>
@@ -550,31 +550,31 @@ async function loadRestaurants() {
         <div class="fw-bold" style="font-size:16px;">${escHtml(r.name)}</div>
         <div class="text-muted" style="font-size:13px;">${escHtml(r.category||"")}</div>
         <div style="font-size:12px;margin-top:3px;color:${r.is_open?"var(--success)":"var(--danger)"}">
-          ${r.is_open?"● Aberto":"● Fechado"}
+          ${r.is_open?"â Aberto":"â Fechado"}
         </div>
       </div>
-      <div style="color:var(--primary);font-size:22px;">›</div>
+      <div style="color:var(--primary);font-size:22px;">âº</div>
     </div>`).join("");
 }
 
 function catIcon(c) {
-  return {Brasileiro:"🍖",Pizzaria:"🍕",Japones:"🍣",Lanches:"🍔",Árabe:"🥙",Italiano:"🍝"}[c]||"🍽️";
+  return {Brasileiro:"ð",Pizzaria:"ð",Japones:"ð£",Lanches:"ð",Ãrabe:"ð¥",Italiano:"ð"}[c]||"ð½ï¸";
 }
 
 async function selectRestaurant(id, name) {
   currentRestaurant = { id, name: name||id };
   cart.setRestaurant(id);
-  document.getElementById("menu-restaurant-name").textContent = name||"Cardápio";
+  document.getElementById("menu-restaurant-name").textContent = name||"CardÃ¡pio";
   showScreen("menu");
 }
 
-// ── Cardápio ──────────────────────────────────────────────────
+// ââ CardÃ¡pio ââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function renderMenu() {
   const el = document.getElementById("menu-content");
   el.innerHTML = spinner();
   const { status, body } = await http.getMenu(currentRestaurant.id);
-  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar cardápio</div>`; return; }
-  if (!body.menu?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🍽️</div><p>Cardápio indisponível</p></div>`; return; }
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar cardÃ¡pio</div>`; return; }
+  if (!body.menu?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">ð½ï¸</div><p>CardÃ¡pio indisponÃ­vel</p></div>`; return; }
   el.innerHTML = body.menu.map(cat => `
     <div>
       <p class="text-primary fw-bold" style="font-size:15px;padding:8px 0 4px;">${escHtml(cat.name)}</p>
@@ -583,7 +583,7 @@ async function renderMenu() {
           <div style="flex:1;">
             <div class="fw-bold" style="font-size:15px;">${escHtml(item.name)}</div>
             ${item.description?`<div class="text-muted" style="font-size:12px;margin:3px 0;">${escHtml(item.description)}</div>`:""}
-            ${item.preparation_time?`<div class="text-muted" style="font-size:11px;">⏱ ${item.preparation_time} min</div>`:""}
+            ${item.preparation_time?`<div class="text-muted" style="font-size:11px;">â± ${item.preparation_time} min</div>`:""}
             <div class="text-primary fw-bold" style="font-size:16px;margin-top:4px;">${fmt.currency(item.price)}</div>
           </div>
           <button class="btn btn-primary" style="width:44px;height:44px;padding:0;font-size:22px;flex-shrink:0;"
@@ -593,7 +593,7 @@ async function renderMenu() {
   updateCartBar();
 }
 
-function addToCart(item) { cart.add(item); toast(`${item.name} adicionado! 🛒`,"success"); updateCartBar(); }
+function addToCart(item) { cart.add(item); toast(`${item.name} adicionado! ð`,"success"); updateCartBar(); }
 function updateCartBar() {
   const bar = document.getElementById("cart-bar");
   if (cart.empty) { bar.classList.add("hidden"); return; }
@@ -603,11 +603,11 @@ function updateCartBar() {
 }
 document.addEventListener("cart:updated", updateCartBar);
 
-// ── Carrinho ──────────────────────────────────────────────────
+// ââ Carrinho ââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderCart() {
   const el = document.getElementById("cart-items-list");
   document.getElementById("cart-total-footer").textContent = fmt.currency(cart.total);
-  if (cart.empty) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🛒</div><p>Carrinho vazio</p></div>`; return; }
+  if (cart.empty) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">ð</div><p>Carrinho vazio</p></div>`; return; }
   el.innerHTML = cart.list.map(e => `
     <div class="card" style="display:flex;align-items:center;gap:10px;">
       <div style="flex:1;">
@@ -615,7 +615,7 @@ function renderCart() {
         <div class="text-primary" style="font-size:13px;">${fmt.currency(e.item.price)}</div>
       </div>
       <div class="qty-controls">
-        <button class="qty-btn qty-btn-minus" onclick="changeQty(${e.item.id},-1)">−</button>
+        <button class="qty-btn qty-btn-minus" onclick="changeQty(${e.item.id},-1)">â</button>
         <span class="qty-value">${e.quantity}</span>
         <button class="qty-btn qty-btn-plus"  onclick="changeQty(${e.item.id},+1)">+</button>
       </div>
@@ -626,7 +626,7 @@ function renderCart() {
 }
 function changeQty(id, d) { cart.updateQty(id, d); renderCart(); }
 
-// ── Pedido ────────────────────────────────────────────────────
+// ââ Pedido ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function placeOrder() {
   if (cart.empty) { toast("Carrinho vazio!","error"); return; }
   const errEl = document.getElementById("cart-error");
@@ -642,7 +642,7 @@ async function placeOrder() {
   }
 }
 
-// ── Pagamento ─────────────────────────────────────────────────
+// ââ Pagamento âââââââââââââââââââââââââââââââââââââââââââââââââ
 let selectedMethod = "pix";
 function selectPayMethod(el) {
   document.querySelectorAll(".pay-method").forEach(m => m.classList.remove("selected"));
@@ -671,24 +671,24 @@ async function confirmPayment() {
     body   = await res.json();
     status = res.status;
   } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = "✓ Confirmar Pagamento"; }
-    errEl.textContent = "Erro de conexão";
+    if (btn) { btn.disabled = false; btn.textContent = "â Confirmar Pagamento"; }
+    errEl.textContent = "Erro de conexÃ£o";
     errEl.classList.remove("hidden");
     return;
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = "✓ Confirmar Pagamento"; }
+  if (btn) { btn.disabled = false; btn.textContent = "â Confirmar Pagamento"; }
 
   if (status === 200) {
-    // Exibe QR PIX se disponível
+    // Exibe QR PIX se disponÃ­vel
     if (selectedMethod === "pix" && body.pix_qr_code) {
       const qrEl = document.getElementById("pix-info");
       qrEl.innerHTML = `
-        <p style="font-size:13px;font-weight:700;color:var(--success);margin-bottom:8px;">✓ PIX gerado! Escaneie para pagar:</p>
+        <p style="font-size:13px;font-weight:700;color:var(--success);margin-bottom:8px;">â PIX gerado! Escaneie para pagar:</p>
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(body.pix_qr_code)}&bgcolor=ffffff&color=000000"
              style="width:200px;height:200px;border-radius:10px;margin:8px 0;">
         <p style="font-size:11px;color:var(--text-muted);word-break:break-all;margin-top:6px;">${escHtml(body.pix_qr_code.slice(0,40))}...</p>
-        <p style="font-size:12px;color:var(--warning);margin-top:6px;">Aguardando confirmação...</p>
+        <p style="font-size:12px;color:var(--warning);margin-top:6px;">Aguardando confirmaÃ§Ã£o...</p>
       `;
       // Aguarda 3s e vai para tracking (em prod. aguardaria webhook)
       setTimeout(() => { cart.clear(); startTracking(currentOrder); }, 4000);
@@ -707,8 +707,8 @@ async function confirmPayment() {
   }
 }
 
-// ── Tracking ──────────────────────────────────────────────────
-const STATUS_ICONS = {pending:"⏳",confirmed:"✅",preparing:"👨‍🍳",ready:"🎉",delivered:"🛵",cancelled:"❌"};
+// ââ Tracking ââââââââââââââââââââââââââââââââââââââââââââââââââ
+const STATUS_ICONS = {pending:"â³",confirmed:"â",preparing:"ð¨âð³",ready:"ð",delivered:"ðµ",cancelled:"â"};
 const STATUS_COLOR = {pending:"var(--warning)",confirmed:"var(--info)",preparing:"#a78bfa",ready:"var(--success)",delivered:"var(--text-muted)",cancelled:"var(--danger)"};
 const TL_STEPS = [
   {key:"pending",   label:"Pedido recebido"},
@@ -740,19 +740,19 @@ function startTracking(order) {
 
 function updateTrackingUI(order) {
   document.getElementById("tracking-order-id").textContent   = `Pedido #${order.id}`;
-  document.getElementById("tracking-icon").textContent       = STATUS_ICONS[order.status]||"⏳";
+  document.getElementById("tracking-icon").textContent       = STATUS_ICONS[order.status]||"â³";
   document.getElementById("tracking-status").textContent     = statusLabel[order.status]||order.status;
   document.getElementById("tracking-status").style.color     = STATUS_COLOR[order.status]||"var(--primary)";
   document.getElementById("tracking-restaurant").textContent = currentRestaurant?.name||"";
   const tl = document.getElementById("tracking-timeline");
   const ci = TL_STEPS.findIndex(s => s.key === order.status);
   if (order.status === "cancelled") {
-    tl.innerHTML = `<div class="tl-item"><div class="tl-dot" style="background:var(--danger)">❌</div><div class="tl-text"><div class="tl-title text-danger">Pedido cancelado</div></div></div>`;
+    tl.innerHTML = `<div class="tl-item"><div class="tl-dot" style="background:var(--danger)">â</div><div class="tl-text"><div class="tl-title text-danger">Pedido cancelado</div></div></div>`;
     return;
   }
   tl.innerHTML = TL_STEPS.map((s,i) => `
     <div class="tl-item">
-      <div class="tl-dot ${i<ci?"done":i===ci?"active":""}">${i<ci?"✓":i===ci?"●":"○"}</div>
+      <div class="tl-dot ${i<ci?"done":i===ci?"active":""}">${i<ci?"â":i===ci?"â":"â"}</div>
       <div class="tl-text">
         <div class="tl-title" style="color:${i===ci?"var(--primary)":i<ci?"var(--success)":"var(--text-muted)"}">${s.label}</div>
       </div>
@@ -761,12 +761,12 @@ function updateTrackingUI(order) {
 
 function goToMenu() { if (pollInterval) clearInterval(pollInterval); showScreen("menu"); }
 
-// ── Meus Pedidos ──────────────────────────────────────────────
+// ââ Meus Pedidos ââââââââââââââââââââââââââââââââââââââââââââââ
 async function loadOrders() {
   const el = document.getElementById("orders-list");
   el.innerHTML = spinner();
   const { status, body } = await http.getOrders();
-  if (status !== 200 || !body.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Nenhum pedido ainda</p></div>`; return; }
+  if (status !== 200 || !body.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">ð</div><p>Nenhum pedido ainda</p></div>`; return; }
   el.innerHTML = body.map(o => `
     <div class="card" style="cursor:pointer;" onclick="viewOrder(${o.id})">
       <div class="card-row mb-8">
@@ -783,30 +783,60 @@ async function viewOrder(id) {
   if (status === 200) startTracking(body);
 }
 
-// ── Avaliação ─────────────────────────────────────────────────
+// ââ AvaliaÃ§Ã£o âââââââââââââââââââââââââââââââââââââââââââââââââ
 let reviewRating = 5;
 function openModal(n)  { document.getElementById(`modal-${n}`).classList.add("open"); pendingReviewId = currentOrder?.id; }
 function closeModal(n) { document.getElementById(`modal-${n}`).classList.remove("open"); }
 function updateStars(v) {
   reviewRating = parseInt(v);
-  document.getElementById("review-stars").textContent = "★".repeat(reviewRating)+"☆".repeat(5-reviewRating);
+  document.getElementById("review-stars").textContent = "â".repeat(reviewRating)+"â".repeat(5-reviewRating);
 }
 async function submitReview() {
   if (!pendingReviewId) return;
   await http.reviewOrder(pendingReviewId, reviewRating, document.getElementById("review-comment").value.trim());
   closeModal("review");
-  toast("Obrigado pela avaliação! ⭐","success");
+  toast("Obrigado pela avaliaÃ§Ã£o! â­","success");
 }
 
-// ── Utils ─────────────────────────────────────────────────────
+// ââ Utils âââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function escHtml(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
-// ── Init ──────────────────────────────────────────────────────
+// ââ Init ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 (function init() {
   updateWelcomeUI();
   if (http._sessionToken) { showScreen("restaurants"); loadRestaurants(); }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
 })();
+
+  // ââ Processa QR Code da URL ao abrir âââââââââââââââââââââââââ
+  window.addEventListener("DOMContentLoaded", async () => {
+    const params = new URLSearchParams(window.location.search);
+    const qrToken = params.get("qr");
+    if (!qrToken) return;
+
+    // Remove o ?qr= da URL sem recarregar
+    window.history.replaceState({}, document.title, "/");
+
+    // Mostra tela de carregamento
+    showScreen("restaurants");
+    toast("Lendo QR Code da mesa...", "info");
+
+    // Tenta escanear o QR Code
+    const { status, body } = await http.scanQR(qrToken, "", "");
+    if (status === 201) {
+      // Salva sessÃ£o e vai para os restaurantes
+      http._sessionToken = body.session_token;
+      localStorage.setItem("ef_session", body.session_token);
+      localStorage.setItem("ef_court", JSON.stringify(body.food_court));
+      localStorage.setItem("ef_table", body.table_number || "");
+      if (body.restaurant_id) localStorage.setItem("ef_restaurant", body.restaurant_id);
+      toast("â Mesa reconhecida! Escolha seu restaurante.", "success");
+      await loadRestaurants();
+    } else {
+      toast("â QR Code invÃ¡lido ou expirado. Tente novamente.", "error");
+    }
+  });
+
 </script>
 </body>
 </html>

@@ -581,18 +581,65 @@ function qrCodeURL(token) {
   return `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
 }
 
-function qrImageSrc(token, size=200, dark="000000", light="ffffff") {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(qrCodeURL(token))}&color=${dark}&bgcolor=${light}&format=png&margin=10`;
+function qrImageSrc(token, size=200, dark="1A1A2E", light="ffffff") {
+  const data = encodeURIComponent(qrCodeURL(token));
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${data}&color=${dark}&bgcolor=${light}&format=png&margin=10&qzone=1&ecc=H`;
 }
 
 function loadQRImage(qr) {
   const wrap = document.getElementById(`qr-img-${qr.id}`);
   if (!wrap) return;
+
+  // Cria canvas com QR + logo EasyFood
+  const canvas = document.createElement("canvas");
+  const SIZE = 180;
+  canvas.width = SIZE;
+  canvas.height = SIZE + 40; // espaço para o nome da mesa embaixo
+  const ctx = canvas.getContext("2d");
+
+  // Fundo branco arredondado
+  ctx.fillStyle = "#ffffff";
+  ctx.roundRect(0, 0, SIZE, SIZE + 40, 12);
+  ctx.fill();
+
+  // Borda laranja
+  ctx.strokeStyle = "#FF6B35";
+  ctx.lineWidth = 3;
+  ctx.roundRect(1.5, 1.5, SIZE - 3, SIZE + 37, 11);
+  ctx.stroke();
+
   const img = new Image();
-  img.style.cssText = "width:180px;height:180px;border-radius:10px;";
-  img.onload  = () => { wrap.innerHTML = ""; wrap.appendChild(img); };
-  img.onerror = () => { wrap.innerHTML = `<p class="text-muted" style="font-size:12px;">Erro ao carregar imagem<br><small>(verifique sua internet)</small></p>`; };
-  img.src = qrImageSrc(qr.qr_token);
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    // Desenha QR Code
+    ctx.drawImage(img, 10, 10, SIZE - 20, SIZE - 20);
+
+    // Logo "easyfood" centralizada sobre o QR (pequena)
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillRect(SIZE/2 - 34, SIZE/2 - 12, 68, 24);
+    ctx.font = "bold 11px Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#1A1A2E";
+    ctx.fillText("easy", SIZE/2 - 8, SIZE/2 + 4);
+    ctx.fillStyle = "#FF6B35";
+    ctx.fillText("food", SIZE/2 + 14, SIZE/2 + 4);
+
+    // Nome da mesa embaixo
+    ctx.font = "bold 12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#1A1A2E";
+    ctx.fillText(qr.label || `Mesa ${qr.table_number}`, SIZE/2, SIZE + 26);
+
+    wrap.innerHTML = "";
+    wrap.appendChild(canvas);
+    canvas.style.cssText = "width:180px;height:220px;border-radius:10px;cursor:pointer;";
+    canvas.onclick = () => printQR(qr.qr_token, qr.label || "Mesa " + qr.table_number);
+    canvas.title = "Clique para imprimir";
+  };
+  img.onerror = () => {
+    wrap.innerHTML = `<p class="text-muted" style="font-size:12px;">Erro ao carregar<br><small>(verifique internet)</small></p>`;
+  };
+  img.src = qrImageSrc(qr.qr_token, 400);
 }
 
 async function createQRCodes() {
@@ -632,36 +679,83 @@ function printQR(token, label) {
   const win = window.open("", "_blank", "width=500,height=700");
   win.document.write(`<!DOCTYPE html><html><head>
     <title>EasyFood - ${label}</title>
+    <meta charset="UTF-8">
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f5f5;}
-      .card{text-align:center;padding:32px 28px;border:3px solid #FF6B35;border-radius:24px;background:#fff;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.12);}
-      .brand{font-size:38px;font-weight:900;color:#1A1A2E;margin-bottom:2px;}
+      @media print{body{margin:0;} .no-print{display:none;}}
+      body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;}
+      .card{
+        text-align:center;padding:28px 24px 24px;
+        border:4px solid #FF6B35;border-radius:28px;
+        background:#fff;max-width:340px;width:100%;
+        box-shadow:0 12px 40px rgba(0,0,0,.15);
+        position:relative;overflow:hidden;
+      }
+      .card::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:6px;
+        background:linear-gradient(90deg,#FF6B35,#ff8c5a,#FF6B35);
+      }
+      .brand{font-size:42px;font-weight:900;color:#1A1A2E;margin-bottom:0px;letter-spacing:-1px;}
       .brand span{color:#FF6B35;}
-      .tagline{font-size:13px;color:#888;margin-bottom:16px;}
-      .mesa{font-size:24px;font-weight:800;color:#1A1A2E;margin-bottom:12px;}
-      img{width:260px;height:260px;margin:8px 0;}
-      .instrucao{font-size:14px;color:#444;line-height:1.6;margin-top:12px;}
+      .tagline{font-size:12px;color:#999;margin-bottom:18px;letter-spacing:1px;text-transform:uppercase;}
+      .mesa-wrap{
+        background:#1A1A2E;border-radius:14px;padding:10px 16px;
+        margin-bottom:16px;display:inline-block;width:100%;
+      }
+      .mesa{font-size:20px;font-weight:800;color:#FF6B35;}
+      .mesa-sub{font-size:11px;color:#888;margin-top:2px;}
+      .qr-wrap{
+        position:relative;display:inline-block;
+        border:3px solid #1A1A2E;border-radius:16px;
+        padding:8px;background:#fff;margin:4px 0 12px;
+      }
+      .qr-wrap img{width:240px;height:240px;display:block;border-radius:8px;}
+      .qr-logo{
+        position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        background:white;border-radius:8px;padding:4px 8px;border:2px solid #FF6B35;
+      }
+      .qr-logo-text{font-size:11px;font-weight:900;color:#1A1A2E;line-height:1;}
+      .qr-logo-text span{color:#FF6B35;}
+      .instrucao{
+        font-size:13px;color:#555;line-height:1.8;
+        background:#fff8f5;border-radius:12px;padding:10px 14px;
+        border-left:3px solid #FF6B35;text-align:left;margin-top:4px;
+      }
       .instrucao strong{color:#FF6B35;}
-      .token{font-size:10px;color:#bbb;margin-top:14px;word-break:break-all;}
-      .divider{border:none;border-top:1px dashed #ddd;margin:14px 0;}
+      .divider{border:none;border-top:2px dashed #eee;margin:16px 0;}
+      .token{font-size:9px;color:#ccc;word-break:break-all;letter-spacing:.5px;}
+      .footer{font-size:10px;color:#bbb;margin-top:10px;}
+      .btn-print{
+        display:block;margin:20px auto 0;padding:12px 32px;
+        background:#FF6B35;color:white;border:none;border-radius:12px;
+        font-size:15px;font-weight:700;cursor:pointer;
+      }
     </style>
     </head><body>
     <div class="card">
       <div class="brand">easy<span>food</span></div>
       <div class="tagline">Peça sem esperar!</div>
-      <hr class="divider">
-      <div class="mesa">📍 ${label}</div>
-      <img src="${imgUrl}" alt="QR Code">
-      <div class="instrucao">
-        📱 <strong>Aponte a câmera</strong> do celular<br>
-        para o QR Code acima e faça<br>
-        seu pedido direto da mesa!
+      <div class="mesa-wrap">
+        <div class="mesa">📍 ${label}</div>
+        <div class="mesa-sub">Escaneie o QR Code para pedir</div>
       </div>
-      <hr class="divider">
+      <div class="qr-wrap">
+        <img src="${imgUrl}" alt="QR Code">
+        <div class="qr-logo">
+          <div class="qr-logo-text">easy<span>food</span></div>
+        </div>
+      </div>
+      <div class="instrucao">
+        📱 <strong>Abra a câmera</strong> do seu celular<br>
+        e aponte para o QR Code acima<br>
+        para fazer seu pedido!
+      </div>
+      <div class="divider"></div>
       <div class="token">${token}</div>
+      <div class="footer">© EasyFood • Praça de Alimentação Digital</div>
+      <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimir</button>
     </div>
-    <script>window.onload=function(){setTimeout(function(){window.print();},800);}<\/script>
+    <script>window.onload=function(){setTimeout(function(){window.print();},1000);}<\/script>
     </body></html>`);
   win.document.close();
 }

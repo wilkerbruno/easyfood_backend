@@ -265,6 +265,17 @@ def create_restaurant():
         db.session.add(emp)
 
     db.session.commit()
+
+    # Salva dados bancários se informados
+    bank_fields = ["pix_key","pix_key_type","bank_name","bank_agency",
+                   "bank_account","bank_account_type","bank_holder_name","bank_holder_document"]
+    bank_data = {f: data.get(f) for f in bank_fields if data.get(f)}
+    if bank_data:
+        from backend.models import RestaurantBankAccount
+        bank = RestaurantBankAccount(restaurant_id=rest.id, **bank_data)
+        db.session.add(bank)
+        db.session.commit()
+
     return jsonify(rest.to_dict()), 201
 
 
