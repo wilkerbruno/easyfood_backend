@@ -11,10 +11,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class Config:
     # MySQL EasyPanel
-    SQLALCHEMY_DATABASE_URI = (
-        "mysql+pymysql://mysql:upg97an05jzr1y9djex2"
-        "@easypanel.pontocomdesconto.com.br:4006/easyfood_bd"
-        "?charset=utf8mb4"
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        "mysql+pymysql://mysql:dm3exjaacxf4ekf9lddw@2.25.131.174:4006/easyfood_bd?charset=utf8mb4"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_POOL_RECYCLE        = 280
