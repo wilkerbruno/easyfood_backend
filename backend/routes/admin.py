@@ -498,3 +498,49 @@ def splits_report():
         "total_restaurant":      total_restaurant,
         "splits": [s.to_dict() for s in splits[:100]],
     })
+
+
+@admin_bp.post("/restaurants/<int:rest_id>/pagarme/recipient")
+@require_admin
+def create_pagarme_recipient(rest_id: int):
+    """Cria ou atualiza o recipient do restaurante no Pagar.me."""
+    from backend.pagarme import criar_recipient
+    from backend.models import RestaurantBankAccount
+
+    rest = Restaurant.query.get_or_404(rest_id)
+    data = request.get_json() or {}
+
+    try:
+        result = criar_recipient(data)
+        recipient_id = result.get("id")
+
+        # Salva o recipient_id no banco
+        bank = RestaurantBankAccount.query.filter_by(restaurant_id=rest_id).first()
+        if bank:
+            bank.pagarme_recipient_id = recipient_id
+        else:
+            bank = RestaurantBankAccount(
+                restaurant_id        = rest_id,
+                pagarme_recipient_id = recipient_id,
+                **{k: data.get(k) for k in ["pix_key","pix_key_type","bank_name",
+                   "bank_agency","bank_account","bank_account_type",
+                   "bank_holder_name","bank_holder_document"] if data.get(k)}
+            )
+            db.session.add(bank)
+
+        db.session.commit()
+        return jsonify({"recipient_id": recipient_id, "status": "created"}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.get("/restaurants/<int:rest_id>/pagarme/recipient")
+@require_admin
+def get_pagarme_recipient(rest_id: int):
+    """Retorna o recipient_id do restaurante."""
+    from backend.models import RestaurantBankAccount
+    bank = RestaurantBankAccount.query.filter_by(restaurant_id=rest_id).first()
+    if not bank or not bank.pagarme_recipient_id:
+        return jsonify({"recipient_id": None, "configured": False}), 200
+    return jsonify({"recipient_id": bank.pagarme_recipient_id, "configured": True}), 200

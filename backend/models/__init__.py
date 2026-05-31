@@ -420,7 +420,9 @@ class RestaurantBankAccount(db.Model):
     mp_access_token      = db.Column(db.String(500))
     mp_public_key        = db.Column(db.String(500))
     mp_collector_id      = db.Column(db.String(100),
-                                     comment="ID do recebedor no Mercado Pago para split")
+                                     comment="ID do recebedor no Pagar.me para split")
+    pagarme_recipient_id = db.Column(db.String(100),
+                                     comment="ID do recipient no Pagar.me")
     # PIX
     pix_key              = db.Column(db.String(200))
     pix_key_type         = db.Column(db.Enum("cpf","cnpj","email","phone","random"))

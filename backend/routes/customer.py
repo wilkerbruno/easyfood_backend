@@ -181,6 +181,9 @@ def get_order(customer: Customer, order_id: int):
 @customer_bp.post("/orders/<int:order_id>/pay")
 @require_customer
 def pay_order(customer: Customer, order_id: int):
+    import os
+    from backend.pagarme import criar_pedido_pix, criar_pedido_cartao
+
     order = Order.query.filter_by(id=order_id, customer_id=customer.id).first_or_404()
 
     if order.payment_status == "paid":
@@ -188,25 +191,114 @@ def pay_order(customer: Customer, order_id: int):
     if order.status == "cancelled":
         return jsonify({"error": "Pedido cancelado"}), 400
 
-    data   = request.get_json()
-    method = data.get("method", "pix")
+    data       = request.get_json() or {}
+    method     = data.get("method", "pix")  # pix | credit_card
+    card_token = data.get("card_token")
+    installments = int(data.get("installments", 1))
 
-    payment = Payment(
-        order_id    = order.id,
-        customer_id = customer.id,
-        method      = method,
-        amount      = order.total,
-        status      = "approved",          # mock: em prod integrar gateway real
-        pix_qr_code = "00020101..." if method == "pix" else None,
-        paid_at     = datetime.utcnow(),
-    )
-    db.session.add(payment)
+    restaurant         = order.restaurant
+    platform_recipient = os.getenv("PAGARME_PLATFORM_RECIPIENT_ID", "")
 
-    order.payment_status = "paid"
-    order.payment_method = method
+    try:
+        if method == "pix":
+            result = criar_pedido_pix(order, restaurant, platform_recipient)
+        elif method in ("credit_card", "debit_card"):
+            if not card_token:
+                return jsonify({"error": "card_token obrigatório para cartão"}), 400
+            result = criar_pedido_cartao(order, restaurant, platform_recipient,
+                                         card_token, installments)
+        else:
+            return jsonify({"error": f"Método '{method}' não suportado"}), 400
 
-    db.session.commit()
-    return jsonify({"message": "Pagamento realizado", "payment": payment.to_dict()})
+        # Extrai dados do resultado do Pagar.me
+        pagarme_order_id = result.get("id")
+        pagarme_status   = result.get("status", "pending")
+        pix_data         = None
+        pix_qr_code      = None
+
+        if method == "pix":
+            charges = result.get("charges", [])
+            if charges:
+                last_tx = charges[0].get("last_transaction", {})
+                pix_data    = last_tx.get("pix_data", {})
+                pix_qr_code = last_tx.get("qr_code") or (pix_data or {}).get("qr_code")
+
+        # Salva pagamento
+        payment = Payment(
+            order_id        = order.id,
+            customer_id     = customer.id,
+            method          = method,
+            amount          = order.total,
+            status          = "approved" if pagarme_status == "paid" else "pending",
+            pix_qr_code     = pix_qr_code,
+            pagarme_order_id = pagarme_order_id,
+            paid_at         = datetime.utcnow() if pagarme_status == "paid" else None,
+        )
+        db.session.add(payment)
+
+        if pagarme_status == "paid":
+            order.payment_status = "paid"
+            order.payment_method = method
+        else:
+            order.payment_status = "pending"
+            order.payment_method = method
+
+        db.session.commit()
+
+        response = {"payment": payment.to_dict(), "pagarme_status": pagarme_status}
+        if method == "pix" and pix_qr_code:
+            response["pix_qr_code"]  = pix_qr_code
+            response["pix_qr_image"] = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={pix_qr_code}"
+            response["expires_in"]   = 3600
+            response["message"]      = "PIX gerado! Escaneie o QR Code para pagar."
+        elif method in ("credit_card", "debit_card"):
+            response["message"] = "Pagamento aprovado!" if pagarme_status == "paid" else "Pagamento em processamento."
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        current_app.logger.error(f"[PAGAMENTO] Erro Pagar.me: {e}")
+        # Fallback: salva como pendente para não bloquear o pedido
+        payment = Payment(
+            order_id    = order.id,
+            customer_id = customer.id,
+            method      = method,
+            amount      = order.total,
+            status      = "error",
+        )
+        db.session.add(payment)
+        db.session.commit()
+        return jsonify({"error": "Erro ao processar pagamento", "detail": str(e)}), 500
+
+
+# ── Webhook Pagar.me ──────────────────────────────────────────
+
+@customer_bp.post("/webhook/pagarme")
+def pagarme_webhook():
+    from backend.pagarme import verificar_webhook
+    payload   = request.get_data()
+    signature = request.headers.get("X-Hub-Signature", "")
+
+    if not verificar_webhook(payload, signature):
+        return jsonify({"error": "Assinatura inválida"}), 401
+
+    event = request.get_json() or {}
+    event_type = event.get("type", "")
+
+    if event_type == "order.paid":
+        order_code = event.get("data", {}).get("code", "")
+        if order_code.startswith("ORDER-"):
+            order_id = int(order_code.replace("ORDER-", ""))
+            order = Order.query.get(order_id)
+            if order:
+                order.payment_status = "paid"
+                payment = Payment.query.filter_by(order_id=order_id).order_by(Payment.id.desc()).first()
+                if payment:
+                    payment.status  = "approved"
+                    payment.paid_at = datetime.utcnow()
+                db.session.commit()
+
+    return jsonify({"ok": True}), 200
 
 
 # ── Avaliar pedido ────────────────────────────────────────────
