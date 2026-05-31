@@ -28,7 +28,31 @@ def create_app(env: str = "development") -> Flask:
     # Extensoes
     db.init_app(app)
     JWTManager(app)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app,
+         resources={r"/*": {"origins": "*"}},
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    )
+
+    # Garante headers CORS em todas as respostas
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers["Access-Control-Allow-Origin"]  = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        return response
+
+    # Responde OPTIONS (preflight) em todas as rotas
+    @app.before_request
+    def handle_options():
+        from flask import request, Response
+        if request.method == "OPTIONS":
+            r = Response()
+            r.headers["Access-Control-Allow-Origin"]  = "*"
+            r.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            r.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            return r, 200
 
     # API Blueprints
     from backend.routes.customer   import customer_bp
