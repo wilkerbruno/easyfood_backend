@@ -501,7 +501,7 @@ def splits_report():
 
 
 @admin_bp.post("/restaurants/<int:rest_id>/pagarme/recipient")
-@require_admin
+@admin_required
 def create_pagarme_recipient(rest_id: int):
     """Cria ou atualiza o recipient do restaurante no Pagar.me."""
     from backend.pagarme import criar_recipient
@@ -536,7 +536,7 @@ def create_pagarme_recipient(rest_id: int):
 
 
 @admin_bp.get("/restaurants/<int:rest_id>/pagarme/recipient")
-@require_admin
+@admin_required
 def get_pagarme_recipient(rest_id: int):
     """Retorna o recipient_id do restaurante."""
     from backend.models import RestaurantBankAccount
