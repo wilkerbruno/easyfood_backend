@@ -69,6 +69,7 @@
     <!-- Tab Bar (scrollável) -->
     <div class="tab-bar">
       <button class="tab-btn active" id="tab-btn-orders"    onclick="switchTab('orders',this)">📋 Pedidos</button>
+      <button class="tab-btn"        id="tab-btn-menu"      onclick="switchTab('menu',this)">🍽️ Cardápio</button>
       <button class="tab-btn"        id="tab-btn-inventory" onclick="switchTab('inventory',this)">📦 Estoque</button>
       <button class="tab-btn"        id="tab-btn-qrcodes"   onclick="switchTab('qrcodes',this)">🔲 QR Codes</button>
       <button class="tab-btn"        id="tab-btn-reports"   onclick="switchTab('reports',this)">📊 Relatórios</button>
@@ -88,6 +89,20 @@
         <div class="chip" onclick="filterOrders('delivered',this)">🛵 Entregues</div>
       </div>
       <div id="orders-content" class="scroll-content"></div>
+    </div>
+
+    <!-- ── ABA: CARDÁPIO ─────────────────────────────────────── -->
+    <div id="tab-menu" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <div style="padding:10px 14px;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.06);">
+        <button class="btn btn-primary btn-sm" onclick="openAddMenuItem()">+ Novo Item</button>
+        <button class="btn btn-secondary btn-sm" onclick="loadMenuItems()">↻ Atualizar</button>
+        <button class="btn btn-secondary btn-sm" onclick="downloadTemplate('menu')" title="Baixar modelo Excel">⬇ Template Excel</button>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;" title="Importar itens via Excel">
+          📥 Importar Excel
+          <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this,'menu')">
+        </label>
+      </div>
+      <div id="menu-content" class="scroll-content"></div>
     </div>
 
     <!-- ── ABA: ESTOQUE ──────────────────────────────────────── -->
@@ -153,6 +168,14 @@
 <div id="print-area" style="display:none;"></div>
 
 <!-- ═══ MODAIS ═══════════════════════════════════════════════ -->
+
+<!-- Modal: Menu Item -->
+<div id="modal-menu-item" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('menu-item')">✕</button>
+    <div id="modal-menu-item-body"></div>
+  </div>
+</div>
 
 <!-- Modal: Criar QR Code -->
 <div id="modal-create-qr" class="modal-overlay">
@@ -340,6 +363,7 @@ function switchTab(name, btn) {
   btn.classList.add("active");
 
   if (name === "orders")    { loadDashboard(); loadOrders(); }
+  if (name === "menu")      loadMenuItems();
   if (name === "inventory") loadInventory();
   if (name === "qrcodes")   loadQRCodes();
   if (name === "reports")   initReport();
