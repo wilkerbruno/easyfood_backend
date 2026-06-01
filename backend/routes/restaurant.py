@@ -474,3 +474,342 @@ def delete_qrcode(qr_id):
     qr.is_active = False
     db.session.commit()
     return jsonify({"message": "QR Code removido"})
+
+
+# ══════════════════════════════════════════════════════════════
+# UPLOAD EXCEL - CARDÁPIO
+# ══════════════════════════════════════════════════════════════
+
+@restaurant_bp.post("/menu/import")
+@require_employee
+def import_menu_excel(emp):
+    """Importa cardápio via planilha Excel."""
+    import io
+    try:
+        import openpyxl
+    except ImportError:
+        return jsonify({"error": "openpyxl não instalado"}), 500
+
+    if "file" not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado"}), 400
+
+    file = request.files["file"]
+    if not file.filename.endswith((".xlsx", ".xls")):
+        return jsonify({"error": "Arquivo deve ser .xlsx ou .xls"}), 400
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file.read()), data_only=True)
+    except Exception as e:
+        return jsonify({"error": f"Erro ao ler planilha: {e}"}), 400
+
+    created = 0
+    updated = 0
+    errors  = []
+
+    for sheet in wb.worksheets:
+        category_name = sheet.title.strip() or "Geral"
+
+        # Cria ou busca a categoria
+        cat = MenuCategory.query.filter_by(
+            restaurant_id=emp.restaurant_id,
+            name=category_name
+        ).first()
+        if not cat:
+            cat = MenuCategory(restaurant_id=emp.restaurant_id, name=category_name)
+            db.session.add(cat)
+            db.session.flush()
+
+        # Lê as linhas (ignora cabeçalho)
+        headers = [str(c.value).strip().lower() if c.value else "" for c in next(sheet.iter_rows(min_row=1, max_row=1))]
+
+        for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or not row[0]:
+                continue
+            try:
+                def get(col):
+                    try:
+                        idx = headers.index(col)
+                        return row[idx] if idx < len(row) else None
+                    except ValueError:
+                        return None
+
+                name  = str(get("nome") or get("name") or row[0] or "").strip()
+                price = get("preco") or get("preço") or get("price") or get("valor") or 0
+                desc  = get("descricao") or get("descrição") or get("description") or ""
+                prep  = get("tempo") or get("preparo") or get("preparation_time") or 0
+                avail = get("disponivel") or get("disponível") or get("available") or True
+
+                if not name:
+                    continue
+
+                try:
+                    price = float(str(price).replace("R$","").replace(",",".").strip())
+                except:
+                    price = 0.0
+
+                # Verifica se já existe
+                existing = MenuItem.query.filter_by(
+                    restaurant_id=emp.restaurant_id,
+                    name=name,
+                    is_active=True
+                ).first()
+
+                if existing:
+                    existing.price       = price
+                    existing.description = str(desc) if desc else existing.description
+                    existing.category_id = cat.id
+                    updated += 1
+                else:
+                    item = MenuItem(
+                        restaurant_id    = emp.restaurant_id,
+                        category_id      = cat.id,
+                        name             = name,
+                        description      = str(desc) if desc else None,
+                        price            = price,
+                        preparation_time = int(prep) if prep else None,
+                        is_available     = bool(avail) if avail != "" else True,
+                    )
+                    db.session.add(item)
+                    created += 1
+
+            except Exception as e:
+                errors.append(f"Linha {row_idx}: {e}")
+
+    db.session.commit()
+    return jsonify({
+        "message": f"Importação concluída! {created} criados, {updated} atualizados.",
+        "created": created, "updated": updated, "errors": errors
+    }), 200
+
+
+@restaurant_bp.get("/menu/template")
+@require_employee
+def download_menu_template(emp):
+    """Baixa template Excel para importação de cardápio."""
+    import io
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        return jsonify({"error": "openpyxl não instalado"}), 500
+
+    wb = openpyxl.Workbook()
+
+    # Aba 1 — Lanches
+    for sheet_name in ["Lanches", "Bebidas", "Sobremesas"]:
+        ws = wb.create_sheet(sheet_name)
+        headers = ["nome", "preco", "descricao", "tempo", "disponivel"]
+        header_fill = PatternFill("solid", fgColor="FF6B35")
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h.upper())
+            cell.font      = Font(bold=True, color="FFFFFF")
+            cell.fill      = header_fill
+            cell.alignment = Alignment(horizontal="center")
+            ws.column_dimensions[cell.column_letter].width = 20
+
+        # Exemplos
+        examples = [
+            ["X-Burguer",  15.90, "Hamburguer artesanal com queijo",  15, True],
+            ["X-Salada",   17.90, "Hamburguer com alface e tomate",   15, True],
+            ["Batata Frita", 8.90, "Porção de batata frita crocante", 10, True],
+        ]
+        if sheet_name == "Bebidas":
+            examples = [
+                ["Coca-Cola 350ml", 5.00, "Refrigerante gelado", 2, True],
+                ["Suco de Laranja", 7.00, "Suco natural 300ml",  3, True],
+            ]
+        elif sheet_name == "Sobremesas":
+            examples = [
+                ["Sorvete",    6.00, "Bola de sorvete de creme", 3, True],
+                ["Pudim",      7.00, "Pudim de leite condensado", 2, True],
+            ]
+        for r, ex in enumerate(examples, 2):
+            for c, val in enumerate(ex, 1):
+                ws.cell(row=r, column=c, value=val)
+
+    # Remove aba padrão
+    del wb["Sheet"]
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    from flask import send_file
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="template_cardapio.xlsx"
+    )
+
+
+# ══════════════════════════════════════════════════════════════
+# UPLOAD EXCEL - ESTOQUE
+# ══════════════════════════════════════════════════════════════
+
+@restaurant_bp.post("/inventory/import")
+@require_employee
+def import_inventory_excel(emp):
+    """Importa estoque via planilha Excel."""
+    import io
+    try:
+        import openpyxl
+    except ImportError:
+        return jsonify({"error": "openpyxl não instalado"}), 500
+
+    if "file" not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado"}), 400
+
+    file = request.files["file"]
+    if not file.filename.endswith((".xlsx", ".xls")):
+        return jsonify({"error": "Arquivo deve ser .xlsx ou .xls"}), 400
+
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file.read()), data_only=True)
+        ws = wb.active
+    except Exception as e:
+        return jsonify({"error": f"Erro ao ler planilha: {e}"}), 400
+
+    created = 0
+    updated = 0
+    errors  = []
+
+    headers = [str(c.value).strip().lower() if c.value else "" for c in next(ws.iter_rows(min_row=1, max_row=1))]
+
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        if not row or not row[0]:
+            continue
+        try:
+            def get(col):
+                try:
+                    idx = headers.index(col)
+                    return row[idx] if idx < len(row) else None
+                except ValueError:
+                    return None
+
+            name      = str(get("nome") or get("name") or row[0] or "").strip()
+            qty       = get("quantidade") or get("quantity") or get("qtd") or 0
+            min_qty   = get("minimo") or get("mínimo") or get("min") or 0
+            unit      = get("unidade") or get("unit") or "unit"
+            cost      = get("custo") or get("cost") or get("preco") or 0
+            category  = get("categoria") or get("category") or ""
+            supplier  = get("fornecedor") or get("supplier") or ""
+
+            if not name:
+                continue
+
+            valid_units = ["unit","kg","g","l","ml"]
+            unit = str(unit).lower().strip() if unit else "unit"
+            if unit not in valid_units:
+                unit = "unit"
+
+            try: qty  = float(str(qty).replace(",","."))
+            except: qty = 0
+            try: min_qty = float(str(min_qty).replace(",","."))
+            except: min_qty = 0
+            try: cost = float(str(cost).replace("R$","").replace(",",".").strip())
+            except: cost = 0
+
+            existing = InventoryItem.query.filter_by(
+                restaurant_id=emp.restaurant_id,
+                name=name,
+                is_active=True
+            ).first()
+
+            if existing:
+                existing.quantity     = qty
+                existing.min_quantity = min_qty
+                existing.unit_type    = unit
+                existing.cost_price   = cost
+                if category: existing.category = str(category)
+                if supplier: existing.supplier  = str(supplier)
+                updated += 1
+            else:
+                item = InventoryItem(
+                    restaurant_id = emp.restaurant_id,
+                    name          = name,
+                    quantity      = qty,
+                    min_quantity  = min_qty,
+                    unit_type     = unit,
+                    cost_price    = cost,
+                    category      = str(category) if category else None,
+                    supplier      = str(supplier) if supplier else None,
+                )
+                db.session.add(item)
+                created += 1
+
+        except Exception as e:
+            errors.append(f"Linha {row_idx}: {e}")
+
+    db.session.commit()
+    return jsonify({
+        "message": f"Importação concluída! {created} criados, {updated} atualizados.",
+        "created": created, "updated": updated, "errors": errors
+    }), 200
+
+
+@restaurant_bp.get("/inventory/template")
+@require_employee
+def download_inventory_template(emp):
+    """Baixa template Excel para importação de estoque."""
+    import io
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        return jsonify({"error": "openpyxl não instalado"}), 500
+
+    wb  = openpyxl.Workbook()
+    ws  = wb.active
+    ws.title = "Estoque"
+
+    headers = ["nome","quantidade","minimo","unidade","custo","categoria","fornecedor"]
+    header_fill = PatternFill("solid", fgColor="1A1A2E")
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h.upper())
+        cell.font      = Font(bold=True, color="FFFFFF")
+        cell.fill      = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        ws.column_dimensions[cell.column_letter].width = 18
+
+    examples = [
+        ["Pão de Hamburguer",  50,  20, "unit", 0.80, "Panificados",   "Padaria Central"],
+        ["Carne Bovina",        5,   2, "kg",   35.00, "Proteínas",    "Frigorífico ABC"],
+        ["Queijo Cheddar",      3,   1, "kg",   28.00, "Laticínios",   "Laticínio XYZ"],
+        ["Coca-Cola 350ml",   100,  30, "unit",  2.50, "Bebidas",      "Distribuidora EFG"],
+        ["Óleo de Soja",        2, 0.5, "l",     6.00, "Ingredientes", "Mercado Local"],
+    ]
+    for r, ex in enumerate(examples, 2):
+        for c, val in enumerate(ex, 1):
+            ws.cell(row=r, column=c, value=val)
+
+    # Instruções
+    ws2 = wb.create_sheet("Instruções")
+    instrucoes = [
+        ["CAMPO",       "DESCRIÇÃO",                    "EXEMPLO"],
+        ["nome",        "Nome do item (obrigatório)",    "Pão de Hamburguer"],
+        ["quantidade",  "Quantidade atual em estoque",   "50"],
+        ["minimo",      "Quantidade mínima (alerta)",    "20"],
+        ["unidade",     "unit / kg / g / l / ml",        "unit"],
+        ["custo",       "Preço de custo unitário",        "0.80"],
+        ["categoria",   "Categoria do item",             "Panificados"],
+        ["fornecedor",  "Nome do fornecedor",            "Padaria Central"],
+    ]
+    for r, row in enumerate(instrucoes, 1):
+        for c, val in enumerate(row, 1):
+            cell = ws2.cell(row=r, column=c, value=val)
+            if r == 1:
+                cell.font = Font(bold=True)
+            ws2.column_dimensions[cell.column_letter].width = 30
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    from flask import send_file
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="template_estoque.xlsx"
+    )

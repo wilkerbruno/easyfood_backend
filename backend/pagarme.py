@@ -102,7 +102,6 @@ def criar_pedido_pix(order, restaurant, platform_recipient_id: str) -> dict:
                     {"name": "Restaurante", "value": restaurant.name},
                 ]
             },
-            "split": splits,
         }],
     }
     if order.customer:
@@ -163,7 +162,6 @@ def criar_pedido_cartao(order, restaurant, platform_recipient_id: str,
                 "statement_descriptor": "EASYFOOD",
                 "card_token": card_token,
             },
-            "split": splits,
         }],
     }
     if order.customer:

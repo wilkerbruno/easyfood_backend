@@ -92,9 +92,14 @@
 
     <!-- ── ABA: ESTOQUE ──────────────────────────────────────── -->
     <div id="tab-inventory" class="tab-content" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-      <div style="padding:10px 14px;display:flex;gap:8px;flex-shrink:0;">
-        <input type="text" id="inv-search" placeholder="🔍 Buscar produto..." oninput="filterInventory()" style="flex:1;">
+      <div style="padding:10px 14px;display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+        <input type="text" id="inv-search" placeholder="🔍 Buscar produto..." oninput="filterInventory()" style="flex:1;min-width:120px;">
         <button class="btn btn-primary btn-sm" onclick="openAddInventory()">+ Novo</button>
+        <button class="btn btn-secondary btn-sm" onclick="downloadTemplate('inventory')" title="Baixar template Excel">⬇ Template</button>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;">
+          📥 Excel
+          <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this,'inventory')">
+        </label>
       </div>
       <div id="inventory-content" class="scroll-content"></div>
     </div>
