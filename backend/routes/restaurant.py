@@ -481,7 +481,7 @@ def delete_qrcode(qr_id):
 # ══════════════════════════════════════════════════════════════
 
 @restaurant_bp.post("/menu/import")
-@require_employee
+@jwt_required()
 def import_menu_excel(emp):
     """Importa cardápio via planilha Excel."""
     import io
@@ -583,7 +583,7 @@ def import_menu_excel(emp):
 
 
 @restaurant_bp.get("/menu/template")
-@require_employee
+@jwt_required()
 def download_menu_template(emp):
     """Baixa template Excel para importação de cardápio."""
     import io
@@ -648,7 +648,7 @@ def download_menu_template(emp):
 # ══════════════════════════════════════════════════════════════
 
 @restaurant_bp.post("/inventory/import")
-@require_employee
+@jwt_required()
 def import_inventory_excel(emp):
     """Importa estoque via planilha Excel."""
     import io
@@ -749,7 +749,7 @@ def import_inventory_excel(emp):
 
 
 @restaurant_bp.get("/inventory/template")
-@require_employee
+@jwt_required()
 def download_inventory_template(emp):
     """Baixa template Excel para importação de estoque."""
     import io
