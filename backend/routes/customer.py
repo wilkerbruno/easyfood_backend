@@ -182,7 +182,10 @@ def get_order(customer: Customer, order_id: int):
 @require_customer
 def pay_order(customer: Customer, order_id: int):
     import os
-    from backend.pagarme import criar_pedido_pix, criar_pedido_cartao
+    from backend.stripe_payment import (
+        criar_payment_intent_pix, criar_payment_intent_cartao,
+        STRIPE_PUBLIC_KEY
+    )
 
     order = Order.query.filter_by(id=order_id, customer_id=customer.id).first_or_404()
 
@@ -191,74 +194,87 @@ def pay_order(customer: Customer, order_id: int):
     if order.status == "cancelled":
         return jsonify({"error": "Pedido cancelado"}), 400
 
-    data       = request.get_json() or {}
-    method     = data.get("method", "pix")  # pix | credit_card
-    card_token = data.get("card_token")
-    installments = int(data.get("installments", 1))
+    data             = request.get_json() or {}
+    method           = data.get("method", "pix")  # pix | credit_card
+    payment_method_id = data.get("payment_method_id")  # Stripe payment method ID
 
-    restaurant         = order.restaurant
-    platform_recipient = os.getenv("PAGARME_PLATFORM_RECIPIENT_ID", "")
+    restaurant = order.restaurant
 
     try:
         if method == "pix":
-            result = criar_pedido_pix(order, restaurant, platform_recipient)
+            intent     = criar_payment_intent_pix(order, restaurant)
+            pi_id      = intent["id"]
+            pi_status  = intent["status"]
+            pix_data   = intent.get("next_action", {}).get("pix_display_qr_code", {})
+            pix_qr     = pix_data.get("data", "")
+
+            payment = Payment(
+                order_id    = order.id,
+                customer_id = customer.id,
+                method      = "pix",
+                amount      = order.total,
+                status      = "approved" if pi_status == "succeeded" else "pending",
+                pix_qr_code = pix_qr,
+                pagarme_order_id = pi_id,
+                paid_at     = datetime.utcnow() if pi_status == "succeeded" else None,
+            )
+            db.session.add(payment)
+            order.payment_status = "paid" if pi_status == "succeeded" else "pending"
+            order.payment_method  = "pix"
+            db.session.commit()
+
+            response = {
+                "payment":         payment.to_dict(),
+                "stripe_status":   pi_status,
+                "payment_intent":  pi_id,
+                "client_secret":   intent["client_secret"],
+                "public_key":      STRIPE_PUBLIC_KEY,
+                "message":         "PIX gerado! Use o QR Code ou chave para pagar.",
+            }
+            if pix_qr:
+                response["pix_qr_code"]  = pix_qr
+                response["pix_qr_image"] = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={pix_qr}"
+                response["expires_in"]   = 3600
+            return jsonify(response), 200
+
         elif method in ("credit_card", "debit_card"):
-            if not card_token:
-                return jsonify({"error": "card_token obrigatório para cartão"}), 400
-            result = criar_pedido_cartao(order, restaurant, platform_recipient,
-                                         card_token, installments)
+            if not payment_method_id:
+                return jsonify({
+                    "error": "payment_method_id obrigatório",
+                    "public_key": STRIPE_PUBLIC_KEY
+                }), 400
+
+            intent    = criar_payment_intent_cartao(order, restaurant, payment_method_id)
+            pi_id     = intent["id"]
+            pi_status = intent["status"]
+
+            payment = Payment(
+                order_id    = order.id,
+                customer_id = customer.id,
+                method      = method,
+                amount      = order.total,
+                status      = "approved" if pi_status == "succeeded" else "pending",
+                pagarme_order_id = pi_id,
+                paid_at     = datetime.utcnow() if pi_status == "succeeded" else None,
+            )
+            db.session.add(payment)
+            order.payment_status = "paid" if pi_status == "succeeded" else "pending"
+            order.payment_method  = method
+            db.session.commit()
+
+            return jsonify({
+                "payment":        payment.to_dict(),
+                "stripe_status":  pi_status,
+                "payment_intent": pi_id,
+                "client_secret":  intent["client_secret"],
+                "message": "Pagamento aprovado!" if pi_status == "succeeded" else "Aguardando confirmação."
+            }), 200
+
         else:
             return jsonify({"error": f"Método '{method}' não suportado"}), 400
 
-        # Extrai dados do resultado do Pagar.me
-        pagarme_order_id = result.get("id")
-        pagarme_status   = result.get("status", "pending")
-        pix_data         = None
-        pix_qr_code      = None
-
-        if method == "pix":
-            charges = result.get("charges", [])
-            if charges:
-                last_tx = charges[0].get("last_transaction", {})
-                pix_data    = last_tx.get("pix_data", {})
-                pix_qr_code = last_tx.get("qr_code") or (pix_data or {}).get("qr_code")
-
-        # Salva pagamento
-        payment = Payment(
-            order_id        = order.id,
-            customer_id     = customer.id,
-            method          = method,
-            amount          = order.total,
-            status          = "approved" if pagarme_status == "paid" else "pending",
-            pix_qr_code     = pix_qr_code,
-            pagarme_order_id = pagarme_order_id,
-            paid_at         = datetime.utcnow() if pagarme_status == "paid" else None,
-        )
-        db.session.add(payment)
-
-        if pagarme_status == "paid":
-            order.payment_status = "paid"
-            order.payment_method = method
-        else:
-            order.payment_status = "pending"
-            order.payment_method = method
-
-        db.session.commit()
-
-        response = {"payment": payment.to_dict(), "pagarme_status": pagarme_status}
-        if method == "pix" and pix_qr_code:
-            response["pix_qr_code"]  = pix_qr_code
-            response["pix_qr_image"] = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={pix_qr_code}"
-            response["expires_in"]   = 3600
-            response["message"]      = "PIX gerado! Escaneie o QR Code para pagar."
-        elif method in ("credit_card", "debit_card"):
-            response["message"] = "Pagamento aprovado!" if pagarme_status == "paid" else "Pagamento em processamento."
-
-        return jsonify(response), 200
-
     except Exception as e:
-        current_app.logger.error(f"[PAGAMENTO] Erro Pagar.me: {e}")
-        # Fallback: salva como pendente para não bloquear o pedido
+        current_app.logger.error(f"[PAGAMENTO] Erro Stripe: {e}")
         payment = Payment(
             order_id    = order.id,
             customer_id = customer.id,
@@ -326,3 +342,38 @@ def review_order(customer: Customer, order_id: int):
     db.session.add(review)
     db.session.commit()
     return jsonify({"message": "Avaliação registrada"}), 201
+
+
+# ── Webhook Stripe ────────────────────────────────────────────
+
+@customer_bp.post("/webhook/stripe")
+def stripe_webhook():
+    from backend.stripe_payment import verificar_webhook
+    payload   = request.get_data()
+    signature = request.headers.get("Stripe-Signature", "")
+    try:
+        event = verificar_webhook(payload, signature)
+        if event is None:
+            event = request.get_json() or {}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    event_type = event.get("type", "")
+
+    if event_type == "payment_intent.succeeded":
+        pi = event.get("data", {}).get("object", {})
+        pi_id    = pi.get("id")
+        order_id = pi.get("metadata", {}).get("order_id")
+        if order_id:
+            order = Order.query.get(int(order_id))
+            if order:
+                order.payment_status = "paid"
+                payment = Payment.query.filter_by(
+                    pagarme_order_id=pi_id
+                ).order_by(Payment.id.desc()).first()
+                if payment:
+                    payment.status  = "approved"
+                    payment.paid_at = datetime.utcnow()
+                db.session.commit()
+
+    return jsonify({"ok": True}), 200
