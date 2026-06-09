@@ -1,12 +1,6 @@
 __pycache__
 *.pyc
 *.pyo
+.env
 .git
-.gitignore
-*.md
-apk_projects/
-database/
-iniciar.py
-migrar.py
-limpar_duplicatas.py
-nixpacks.toml
+node_modules
