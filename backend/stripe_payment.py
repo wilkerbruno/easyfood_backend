@@ -1,32 +1,35 @@
 # =============================================================
-#  EASYFOOD - Integração Stripe
+#  EASYFOOD - Integração Stripe v8
 # =============================================================
 import os, stripe
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+stripe.api_key    = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY", "")
 
 
-def criar_payment_intent_pix(order, restaurant) -> dict:
+def criar_payment_intent(order, restaurant, method="card") -> dict:
     total_centavos = int(round(float(order.total) * 100))
-    intent = stripe.PaymentIntent.create(
-        amount               = total_centavos,
-        currency             = "brl",
-        payment_method_types = ["pix"],
-        metadata             = {
+    return stripe.PaymentIntent.create(
+        amount   = total_centavos,
+        currency = "brl",
+        automatic_payment_methods = {"enabled": True},
+        metadata = {
             "order_id":        str(order.id),
             "restaurant_id":   str(restaurant.id),
             "restaurant_name": restaurant.name,
         },
         description = f"Pedido #{order.id} - EasyFood - {restaurant.name}",
     )
-    return intent
 
 
-def criar_payment_intent_cartao(order, restaurant,
-                                 payment_method_id: str) -> dict:
+# Aliases para compatibilidade
+def criar_payment_intent_pix(order, restaurant):
+    return criar_payment_intent(order, restaurant)
+
+
+def criar_payment_intent_cartao(order, restaurant, payment_method_id: str):
     total_centavos = int(round(float(order.total) * 100))
-    intent = stripe.PaymentIntent.create(
+    return stripe.PaymentIntent.create(
         amount               = total_centavos,
         currency             = "brl",
         payment_method       = payment_method_id,
@@ -34,16 +37,10 @@ def criar_payment_intent_cartao(order, restaurant,
         confirm              = True,
         metadata             = {
             "order_id":        str(order.id),
-            "restaurant_id":   str(restaurant.id),
             "restaurant_name": restaurant.name,
         },
         description = f"Pedido #{order.id} - EasyFood - {restaurant.name}",
     )
-    return intent
-
-
-def consultar_payment_intent(pi_id: str) -> dict:
-    return stripe.PaymentIntent.retrieve(pi_id)
 
 
 def verificar_webhook(payload: bytes, signature: str):
