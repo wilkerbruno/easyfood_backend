@@ -6,12 +6,14 @@ from backend.stripe_payment import criar_payment_intent, STRIPE_PUBLIC_KEY, veri
 
 payment_bp = Blueprint("payment", __name__, url_prefix="/api/v1/payment")
 
+
 def _get_customer():
     token = request.headers.get("X-Session-Token") or \
             (request.get_json(silent=True) or {}).get("session_token")
     if not token:
         return None
     return Customer.query.filter_by(session_token=token).first()
+
 
 @payment_bp.post("/orders/<int:order_id>/pay")
 def pay_order(order_id):
@@ -56,6 +58,7 @@ def pay_order(order_id):
         current_app.logger.error(f"[PAGAMENTO] Erro: {e}")
         return jsonify({"error": "Erro ao processar pagamento", "detail": str(e)}), 500
 
+
 @payment_bp.post("/webhook/stripe")
 def stripe_webhook():
     payload   = request.get_data()
@@ -71,12 +74,15 @@ def stripe_webhook():
             order = db.session.get(Order, int(order_id))
             if order:
                 order.payment_status = "paid"
-                p = Payment.query.filter_by(gateway_ref=pi.get("id")).order_by(Payment.id.desc()).first()
+                p = Payment.query.filter_by(
+                    gateway_ref=pi.get("id")
+                ).order_by(Payment.id.desc()).first()
                 if p:
                     p.status  = "approved"
                     p.paid_at = datetime.utcnow()
                 db.session.commit()
     return jsonify({"ok": True}), 200
+
 
 @payment_bp.get("/orders/<int:order_id>/status")
 def payment_status(order_id):
@@ -91,6 +97,35 @@ def payment_status(order_id):
         "payment":        payment.to_dict() if payment else None,
     }), 200
 
+
 @payment_bp.get("/checkout")
 def checkout_page():
     return render_template("checkout.html")
+
+
+@payment_bp.post("/confirm")
+def confirm_payment():
+    import stripe as _stripe
+    data  = request.get_json() or {}
+    oid   = data.get("order_id")
+    pi_id = data.get("payment_intent_id")
+    if not oid or not pi_id:
+        return jsonify({"error": "Dados invalidos"}), 400
+    try:
+        _stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+        intent = _stripe.PaymentIntent.retrieve(pi_id)
+        if intent.status == "succeeded":
+            order = db.session.get(Order, int(oid))
+            if order:
+                order.payment_status = "paid"
+                p = Payment.query.filter_by(
+                    gateway_ref=pi_id
+                ).order_by(Payment.id.desc()).first()
+                if p:
+                    p.status  = "approved"
+                    p.paid_at = datetime.utcnow()
+                db.session.commit()
+            return jsonify({"ok": True}), 200
+        return jsonify({"ok": False, "status": intent.status}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
