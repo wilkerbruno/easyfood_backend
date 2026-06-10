@@ -116,3 +116,9 @@ def payment_status(order_id):
         "payment_status": order.payment_status,
         "payment":        payment.to_dict() if payment else None,
     }), 200
+
+
+@payment_bp.get("/checkout")
+def checkout_page():
+    from flask import render_template
+    return render_template("checkout.html")

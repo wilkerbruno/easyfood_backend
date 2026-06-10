@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EasyFood — Pagamento</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #0f0f1a; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: #1a1a2e; border-radius: 16px; padding: 28px; width: 100%; max-width: 420px; }
+    .logo { text-align: center; margin-bottom: 20px; }
+    .logo span { font-size: 28px; font-weight: 800; } 
+    .logo .food { color: #FF6B35; }
+    .total { text-align: center; background: #0f0f1a; border-radius: 10px; padding: 14px; margin-bottom: 24px; }
+    .total-label { color: #8888aa; font-size: 13px; }
+    .total-value { color: #FF6B35; font-size: 32px; font-weight: 800; margin-top: 4px; }
+    #payment-element { margin-bottom: 20px; }
+    #submit { background: #FF6B35; color: #fff; border: none; border-radius: 10px; padding: 16px; width: 100%; font-size: 16px; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+    #submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    #error { color: #ff4444; font-size: 13px; margin-top: 12px; text-align: center; min-height: 20px; }
+    #success { display: none; text-align: center; padding: 20px; }
+    #success .icon { font-size: 64px; }
+    #success h2 { color: #4caf50; margin: 12px 0 8px; }
+    #success p { color: #8888aa; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><span>easy<span class="food">food</span></span></div>
+
+  <div id="payment-form">
+    <div class="total">
+      <div class="total-label">Total do pedido</div>
+      <div class="total-value" id="total-display">R$ --</div>
+    </div>
+    <div id="payment-element"></div>
+    <button id="submit">💳 Pagar agora</button>
+    <div id="error"></div>
+  </div>
+
+  <div id="success">
+    <div class="icon">✅</div>
+    <h2>Pagamento confirmado!</h2>
+    <p>Seu pedido foi recebido.<br>Você pode fechar essa janela.</p>
+  </div>
+</div>
+
+<script>
+  const params  = new URLSearchParams(window.location.search);
+  const secret  = params.get('client_secret') || '';
+  const pubKey  = params.get('public_key')    || '';
+  const amount  = parseFloat(params.get('amount') || '0');
+
+  document.getElementById('total-display').textContent =
+    'R$ ' + amount.toFixed(2).replace('.', ',');
+
+  if (!secret || !pubKey) {
+    document.getElementById('error').textContent = 'Parâmetros inválidos.';
+  } else {
+    const stripe   = Stripe(pubKey);
+    const elements = stripe.elements({ clientSecret: secret, appearance: {
+      theme: 'night',
+      variables: { colorPrimary: '#FF6B35', borderRadius: '8px' }
+    }});
+
+    const payEl = elements.create('payment');
+    payEl.mount('#payment-element');
+
+    document.getElementById('submit').addEventListener('click', async () => {
+      const btn = document.getElementById('submit');
+      const err = document.getElementById('error');
+      btn.disabled = true;
+      btn.textContent = 'Processando...';
+      err.textContent = '';
+
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: window.location.href + '&paid=1' },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        err.textContent = error.message;
+        btn.disabled = false;
+        btn.textContent = '💳 Pagar agora';
+      } else {
+        document.getElementById('payment-form').style.display = 'none';
+        document.getElementById('success').style.display = 'block';
+        setTimeout(() => window.close(), 3000);
+      }
+    });
+  }
+</script>
+</body>
+</html>
