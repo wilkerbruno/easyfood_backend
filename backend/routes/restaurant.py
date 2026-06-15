@@ -176,8 +176,30 @@ def update_order_status(order_id):
 @jwt_required()
 def get_menu():
     emp = current_employee()
-    restaurant = Restaurant.query.get(emp.restaurant_id)
-    return jsonify(restaurant.to_dict(include_menu=True))
+    from backend.models import MenuCategory, MenuItem
+    categories = []
+    cats = MenuCategory.query.filter_by(
+        restaurant_id=emp.restaurant_id, is_active=True
+    ).order_by(MenuCategory.display_order).all()
+    for cat in cats:
+        items = MenuItem.query.filter_by(
+            category_id=cat.id, is_active=True
+        ).all()
+        cat_dict = cat.to_dict()
+        cat_dict["items"] = [i.to_dict() for i in items]
+        categories.append(cat_dict)
+
+    # Itens sem categoria
+    no_cat = MenuItem.query.filter_by(
+        restaurant_id=emp.restaurant_id, category_id=None, is_active=True
+    ).all()
+    if no_cat:
+        categories.append({
+            "id": None, "name": "Geral", "display_order": 999,
+            "items": [i.to_dict() for i in no_cat]
+        })
+
+    return jsonify({"categories": categories, "total": sum(len(c["items"]) for c in categories)})
 
 
 @restaurant_bp.post("/menu/items")
