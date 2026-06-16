@@ -43,13 +43,7 @@
         <div id="login-error" class="alert alert-danger hidden"></div>
         <button class="btn btn-primary" onclick="doLogin()" id="login-btn">Entrar</button>
         <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);">
-          <p class="text-muted text-center" style="font-size:12px;margin-bottom:8px;">Demonstração (senha: admin123)</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@sabor.com')">Sabor Brasileiro</button>
-            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@pizza.com')">Pizza Express</button>
-            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@sushi.com')">Sushi World</button>
-            <button class="btn btn-secondary" style="font-size:11px;padding:8px;" onclick="fillLogin('admin@burger.com')">Burger House</button>
-          </div>
+
         </div>
       </div>
     </div>
@@ -269,10 +263,7 @@ let refreshTimer   = null;
 let currentTab     = "orders";
 
 // ── Login ─────────────────────────────────────────────────────
-function fillLogin(email) {
-  document.getElementById("login-email").value    = email;
-  document.getElementById("login-password").value = "admin123";
-}
+
 
 async function doLogin() {
   const email = document.getElementById("login-email").value.trim();
