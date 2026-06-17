@@ -167,6 +167,11 @@ class Customer(db.Model):
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at    = db.Column(db.DateTime, nullable=False)
 
+    fcm_token            = db.Column(db.String(255))
+    table_release_asked_at  = db.Column(db.DateTime)  # quando perguntamos se liberou a mesa
+    table_release_deadline  = db.Column(db.DateTime)  # prazo para responder (10 min depois)
+    is_active             = db.Column(db.Boolean, default=True)  # False = desconectado/mesa liberada
+
     orders = db.relationship("Order", backref="customer", lazy="dynamic")
 
 
@@ -187,6 +192,7 @@ class Order(db.Model):
     discount       = db.Column(db.Numeric(10, 2), default=0)
     total          = db.Column(db.Numeric(10, 2), default=0)
     notes          = db.Column(db.Text)
+    delivered_at   = db.Column(db.DateTime)  # quando o status virou "delivered"
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at     = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

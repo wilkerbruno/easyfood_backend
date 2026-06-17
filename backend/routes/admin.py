@@ -7,7 +7,7 @@ import bcrypt
 from datetime import datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import (
     create_access_token, jwt_required,
     get_jwt_identity, get_jwt,
@@ -252,19 +252,32 @@ def create_restaurant():
 
     # Cria admin do restaurante automaticamente se informado
     if data.get("admin_email") and data.get("admin_password"):
+        admin_email = data["admin_email"].strip().lower()
+        existing_emp = Employee.query.filter_by(email=admin_email).first()
+        if existing_emp:
+            db.session.rollback()
+            return jsonify({
+                "error": f"O e-mail '{admin_email}' já está em uso por outro funcionário/admin. Use um e-mail diferente."
+            }), 409
+
         pwd_hash = bcrypt.hashpw(
             data["admin_password"].encode(), bcrypt.gensalt()
         ).decode()
         emp = Employee(
             restaurant_id = rest.id,
             name          = data.get("admin_name", rest.owner_name or "Admin"),
-            email         = data["admin_email"].strip().lower(),
+            email         = admin_email,
             password_hash = pwd_hash,
             role          = "admin",
         )
         db.session.add(emp)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"[CREATE_RESTAURANT] Erro: {e}")
+        return jsonify({"error": "Erro ao salvar restaurante. Verifique os dados e tente novamente."}), 500
 
     # Salva dados bancários se informados
     bank_fields = ["pix_key","pix_key_type","bank_name","bank_agency",

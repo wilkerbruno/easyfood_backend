@@ -161,12 +161,26 @@ def update_order_status(order_id):
         return jsonify({"error": f"Status invalido. Use: {valid}"}), 400
 
     order.status = new_status
+    if new_status == "delivered":
+        order.delivered_at = datetime.utcnow()
+
     history = OrderStatusHistory(
         order_id=order.id, status=new_status,
         changed_by=emp.id, notes=notes,
     )
     db.session.add(history)
     db.session.commit()
+
+    # Notifica o cliente sobre a mudanca de status
+    try:
+        from backend.models import Customer
+        from backend.firebase_notify import notify_order_status
+        customer = db.session.get(Customer, order.customer_id)
+        if customer:
+            notify_order_status(customer, order)
+    except Exception as e:
+        print(f"[NOTIFY] Erro ao notificar status: {e}")
+
     return jsonify(order.to_dict(include_items=True))
 
 
@@ -448,8 +462,10 @@ def sales_report():
 @jwt_required()
 def list_qrcodes():
     emp  = current_employee()
+    rest = Restaurant.query.get(emp.restaurant_id)
+    # QR codes sao compartilhados por toda a praca de alimentacao
     qrs  = TableQRCode.query.filter_by(
-        restaurant_id=emp.restaurant_id, is_active=True
+        food_court_id=rest.food_court_id, is_active=True
     ).order_by(TableQRCode.table_number).all()
     return jsonify([q.to_dict() for q in qrs])
 
@@ -472,9 +488,18 @@ def create_qrcode():
     created = []
     for i in range(qty):
         suffix = f"-{i+1}" if qty > 1 else ""
+        # Verifica se ja existe uma mesa com esse numero na praca
+        existing = TableQRCode.query.filter_by(
+            food_court_id=rest.food_court_id,
+            table_number=f"{table}{suffix}",
+            is_active=True
+        ).first()
+        if existing:
+            created.append(existing)
+            continue
         qr = TableQRCode(
             food_court_id = rest.food_court_id,
-            restaurant_id = emp.restaurant_id,
+            restaurant_id = None,  # compartilhado por toda a praca
             table_number  = f"{table}{suffix}",
             qr_token      = secrets.token_hex(16),
             label         = f"{label}{suffix}",
@@ -489,9 +514,11 @@ def create_qrcode():
 @restaurant_bp.delete("/qrcodes/<int:qr_id>")
 @require_role("admin")
 def delete_qrcode(qr_id):
-    emp = current_employee()
-    qr  = TableQRCode.query.filter_by(
-        id=qr_id, restaurant_id=emp.restaurant_id
+    emp  = current_employee()
+    rest = Restaurant.query.get(emp.restaurant_id)
+    # Permite remover apenas QR codes da mesma praca
+    qr = TableQRCode.query.filter_by(
+        id=qr_id, food_court_id=rest.food_court_id
     ).first_or_404()
     qr.is_active = False
     db.session.commit()

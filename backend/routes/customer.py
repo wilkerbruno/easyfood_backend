@@ -33,8 +33,58 @@ def require_customer(f):
         customer = get_customer_from_token(token)
         if not customer or customer.expires_at < datetime.utcnow():
             return jsonify({"error": "Sessão inválida ou expirada"}), 401
+        if not customer.is_active:
+            return jsonify({"error": "Sessão desconectada. Escaneie o QR Code novamente."}), 401
         return f(customer, *args, **kwargs)
     return wrapper
+
+
+# ── Notificacoes push (FCM) ────────────────────────────────────
+
+@customer_bp.post("/fcm-token")
+@require_customer
+def register_fcm_token(customer: Customer):
+    """Registra/atualiza o token FCM do dispositivo do cliente."""
+    data  = request.get_json() or {}
+    token = data.get("fcm_token", "").strip()
+    if not token:
+        return jsonify({"error": "fcm_token obrigatorio"}), 400
+    customer.fcm_token = token
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@customer_bp.post("/table/release-response")
+@require_customer
+def respond_table_release(customer: Customer):
+    """
+    Cliente responde a pergunta 'a mesa ja foi liberada?'.
+    still_here=True  -> cliente continua na mesa, reseta o timer
+    still_here=False -> cliente confirma que liberou, desconecta
+    """
+    data       = request.get_json() or {}
+    still_here = data.get("still_here", False)
+
+    if still_here:
+        customer.table_release_asked_at = None
+        customer.table_release_deadline = None
+    else:
+        customer.is_active = False
+
+    db.session.commit()
+    return jsonify({"ok": True, "is_active": customer.is_active})
+
+
+@customer_bp.get("/session/status")
+@require_customer
+def session_status(customer: Customer):
+    """Permite o app verificar periodicamente se ha pergunta de liberacao pendente."""
+    pending_question = customer.table_release_asked_at is not None
+    return jsonify({
+        "is_active": customer.is_active,
+        "pending_release_question": pending_question,
+        "deadline": customer.table_release_deadline.isoformat() if customer.table_release_deadline else None,
+    })
 
 
 # ── Escanear QR Code e iniciar sessão ─────────────────────────

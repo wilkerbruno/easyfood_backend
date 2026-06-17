@@ -13,7 +13,7 @@ class Config:
     # MySQL EasyPanel
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "mysql://mysql:2caxht8xoj2hn5gtglm3@easypanel.pontocomdesconto.com.br:3020/easyfood_bd?charset=utf8mb4"
+        "mysql+pymysql://mysql:dm3exjaacxf4ekf9lddw@2.25.131.174:4006/easyfood_bd?charset=utf8mb4"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_POOL_RECYCLE        = 280
@@ -28,7 +28,7 @@ class Config:
     # App
     SECRET_KEY             = os.getenv("SECRET_KEY", "easyfood-secret-2024")
     DEBUG                  = False
-    CUSTOMER_SESSION_HOURS = 4
+    CUSTOMER_SESSION_HOURS = 8760  # 1 ano - praticamente nunca expira
 
 
 class DevelopmentConfig(Config):

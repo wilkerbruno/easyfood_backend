@@ -93,4 +93,13 @@ def create_app(env: str = "development") -> Flask:
     def health():
         return {"status": "ok", "app": "EasyFood", "python": "3.14+"}
 
+    # Inicia o scheduler de liberacao automatica de mesa (apenas 1x por processo)
+    if env == "production" and not app.config.get("_SCHEDULER_STARTED"):
+        try:
+            from backend.scheduler import start_scheduler
+            start_scheduler(app)
+            app.config["_SCHEDULER_STARTED"] = True
+        except Exception as e:
+            print(f"[SCHEDULER] Erro ao iniciar: {e}")
+
     return app
