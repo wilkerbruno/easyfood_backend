@@ -186,6 +186,16 @@ def update_order_status(order_id):
 
 # ── Cardapio ─────────────────────────────────────────────────
 
+@restaurant_bp.get("/menu/categories")
+@jwt_required()
+def list_categories():
+    emp  = current_employee()
+    cats = MenuCategory.query.filter_by(
+        restaurant_id=emp.restaurant_id, is_active=True
+    ).order_by(MenuCategory.display_order).all()
+    return jsonify([c.to_dict() for c in cats])
+
+
 @restaurant_bp.get("/menu")
 @jwt_required()
 def get_menu():
@@ -216,14 +226,47 @@ def get_menu():
     return jsonify({"categories": categories, "total": sum(len(c["items"]) for c in categories)})
 
 
+def _resolve_category_id(emp, data):
+    """
+    Resolve o category_id a partir de category_id OU category_name.
+    Se category_name nao existir ainda para o restaurante, cria automaticamente.
+    """
+    if data.get("category_id"):
+        return int(data["category_id"])
+
+    category_name = (data.get("category_name") or "").strip()
+    if not category_name:
+        return None
+
+    cat = MenuCategory.query.filter_by(
+        restaurant_id=emp.restaurant_id, name=category_name
+    ).first()
+    if cat:
+        return cat.id
+
+    # Cria a categoria nova automaticamente
+    max_order = db.session.query(db.func.max(MenuCategory.display_order)).filter_by(
+        restaurant_id=emp.restaurant_id
+    ).scalar() or 0
+    cat = MenuCategory(
+        restaurant_id=emp.restaurant_id,
+        name=category_name,
+        display_order=max_order + 1,
+    )
+    db.session.add(cat)
+    db.session.flush()  # garante que cat.id existe antes de usar
+    return cat.id
+
+
 @restaurant_bp.post("/menu/items")
 @require_role("admin")
 def create_menu_item():
     emp  = current_employee()
     data = request.get_json() or {}
+    category_id = _resolve_category_id(emp, data)
     item = MenuItem(
         restaurant_id    = emp.restaurant_id,
-        category_id      = data.get("category_id"),
+        category_id      = category_id,
         name             = data["name"],
         description      = data.get("description"),
         price            = data["price"],
@@ -243,6 +286,8 @@ def update_menu_item(item_id):
         id=item_id, restaurant_id=emp.restaurant_id
     ).first_or_404()
     data = request.get_json() or {}
+    if data.get("category_name") and not data.get("category_id"):
+        data["category_id"] = _resolve_category_id(emp, data)
     for field in ["name","description","price","image_url","preparation_time","is_available","category_id"]:
         if field in data:
             setattr(item, field, data[field])

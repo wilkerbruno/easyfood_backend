@@ -142,7 +142,31 @@ def get_menu(customer: Customer, restaurant_id: int):
     restaurant = Restaurant.query.filter_by(
         id=restaurant_id, food_court_id=customer.food_court_id, is_active=True
     ).first_or_404()
-    return jsonify(restaurant.to_dict(include_menu=True))
+
+    from backend.models import MenuCategory, MenuItem
+    cats = MenuCategory.query.filter_by(
+        restaurant_id=restaurant.id, is_active=True
+    ).order_by(MenuCategory.display_order).all()
+
+    categories = []
+    for cat in cats:
+        items = MenuItem.query.filter_by(category_id=cat.id, is_active=True).all()
+        cat_dict = cat.to_dict()
+        cat_dict["items"] = [i.to_dict() for i in items]
+        categories.append(cat_dict)
+
+    no_cat = MenuItem.query.filter_by(
+        restaurant_id=restaurant.id, category_id=None, is_active=True
+    ).all()
+    if no_cat:
+        categories.append({
+            "id": None, "name": "Geral", "display_order": 999,
+            "items": [i.to_dict() for i in no_cat]
+        })
+
+    result = restaurant.to_dict()
+    result["categories"] = categories
+    return jsonify(result)
 
 
 # ── Criar pedido ──────────────────────────────────────────────
