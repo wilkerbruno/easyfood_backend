@@ -6,7 +6,8 @@ import bcrypt
 from datetime import datetime, date, timedelta
 from functools import wraps
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app, send_from_directory
+import os, uuid
 from flask_jwt_extended import (
     create_access_token, jwt_required,
     get_jwt_identity, get_jwt,
@@ -186,6 +187,73 @@ def update_order_status(order_id):
 
 # ── Cardapio ─────────────────────────────────────────────────
 
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
+MAX_LOGO_SIZE = 5 * 1024 * 1024  # 5MB
+
+def _allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@restaurant_bp.post("/logo")
+@require_role("admin")
+def upload_logo():
+    """Faz upload da logo do restaurante e salva no servidor."""
+    emp  = current_employee()
+    rest = Restaurant.query.get(emp.restaurant_id)
+
+    if 'file' not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado"}), 400
+
+    file = request.files['file']
+    if not file.filename or not _allowed_file(file.filename):
+        return jsonify({"error": "Formato inválido. Use PNG, JPG, JPEG, WEBP ou GIF"}), 400
+
+    file.seek(0, 2)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_LOGO_SIZE:
+        return jsonify({"error": "Arquivo muito grande. Máximo 5MB"}), 400
+
+    ext      = file.filename.rsplit('.', 1)[1].lower()
+    filename = f"rest_{rest.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    uploads_dir = os.path.join(current_app.static_folder, "uploads", "logos")
+    os.makedirs(uploads_dir, exist_ok=True)
+    filepath = os.path.join(uploads_dir, filename)
+    file.save(filepath)
+
+    # Remove logo antiga se existir
+    if rest.logo_url:
+        old_name = rest.logo_url.split("/")[-1]
+        old_path = os.path.join(uploads_dir, old_name)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    base_url = request.host_url.rstrip("/")
+    rest.logo_url = f"{base_url}/static/uploads/logos/{filename}"
+    db.session.commit()
+
+    return jsonify({"logo_url": rest.logo_url})
+
+
+@restaurant_bp.delete("/logo")
+@require_role("admin")
+def delete_logo():
+    """Remove a logo do restaurante."""
+    emp  = current_employee()
+    rest = Restaurant.query.get(emp.restaurant_id)
+
+    if rest.logo_url:
+        uploads_dir = os.path.join(current_app.static_folder, "uploads", "logos")
+        old_name = rest.logo_url.split("/")[-1]
+        old_path = os.path.join(uploads_dir, old_name)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+        rest.logo_url = None
+        db.session.commit()
+
+    return jsonify({"ok": True})
+
+
 @restaurant_bp.get("/menu/categories")
 @jwt_required()
 def list_categories():
@@ -194,6 +262,14 @@ def list_categories():
         restaurant_id=emp.restaurant_id, is_active=True
     ).order_by(MenuCategory.display_order).all()
     return jsonify([c.to_dict() for c in cats])
+
+
+@restaurant_bp.get("/profile")
+@jwt_required()
+def get_profile():
+    emp  = current_employee()
+    rest = Restaurant.query.get(emp.restaurant_id)
+    return jsonify(rest.to_dict())
 
 
 @restaurant_bp.get("/menu")
