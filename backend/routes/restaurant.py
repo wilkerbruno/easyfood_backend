@@ -275,6 +275,50 @@ def get_profile():
     return jsonify(rest.to_dict())
 
 
+@restaurant_bp.get("/reviews")
+@jwt_required()
+def get_reviews():
+    """Retorna avaliações do restaurante com médias e distribuição de estrelas."""
+    from backend.models import Review
+    from sqlalchemy import func
+
+    emp = current_employee()
+    rid = emp.restaurant_id
+
+    reviews = Review.query.filter_by(restaurant_id=rid).order_by(Review.created_at.desc()).all()
+    total = len(reviews)
+
+    # Distribuição de estrelas (1-5)
+    distribution = {i: 0 for i in range(1, 6)}
+    total_rating = 0
+    for r in reviews:
+        distribution[r.rating] = distribution.get(r.rating, 0) + 1
+        total_rating += r.rating
+
+    average = round(total_rating / total, 1) if total > 0 else 0.0
+
+    # Percentual de cada estrela
+    star_percent = {
+        str(i): round((distribution[i] / total * 100), 1) if total > 0 else 0
+        for i in range(1, 6)
+    }
+
+    return jsonify({
+        "total":        total,
+        "average":      average,
+        "star_percent": star_percent,
+        "reviews":      [
+            {
+                "id":         r.id,
+                "rating":     r.rating,
+                "comment":    r.comment,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in reviews[:50]  # últimas 50 avaliações
+        ],
+    })
+
+
 @restaurant_bp.get("/menu")
 @jwt_required()
 def get_menu():

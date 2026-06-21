@@ -126,15 +126,57 @@ def start_session():
 @customer_bp.get("/restaurants")
 @require_customer
 def list_restaurants(customer: Customer):
+    from backend.models import Review
+    from sqlalchemy import func
+
     restaurants = (
         Restaurant.query
         .filter_by(food_court_id=customer.food_court_id, is_active=True)
         .all()
     )
-    return jsonify([r.to_dict() for r in restaurants])
+
+    result = []
+    for r in restaurants:
+        d = r.to_dict()
+        # Calcula média de avaliações
+        agg = db.session.query(
+            func.avg(Review.rating).label('avg'),
+            func.count(Review.id).label('total')
+        ).filter_by(restaurant_id=r.id).first()
+        d['average_rating'] = round(float(agg.avg), 1) if agg.avg else 0.0
+        d['total_reviews']  = agg.total or 0
+        result.append(d)
+
+    return jsonify(result)
 
 
 # ── Cardápio completo de um restaurante ───────────────────────
+
+@customer_bp.get("/restaurants/<int:restaurant_id>/reviews")
+@require_customer
+def get_restaurant_reviews(customer: Customer, restaurant_id: int):
+    """Avaliações públicas do restaurante para o cliente visualizar."""
+    from backend.models import Review
+
+    reviews = Review.query.filter_by(restaurant_id=restaurant_id).order_by(Review.created_at.desc()).all()
+    total = len(reviews)
+
+    distribution = {i: 0 for i in range(1, 6)}
+    total_rating = 0
+    for r in reviews:
+        distribution[r.rating] = distribution.get(r.rating, 0) + 1
+        total_rating += r.rating
+
+    average    = round(total_rating / total, 1) if total > 0 else 0.0
+    star_pct   = {str(i): round((distribution[i]/total*100), 1) if total > 0 else 0 for i in range(1, 6)}
+
+    return jsonify({
+        "total":        total,
+        "average":      average,
+        "star_percent": star_pct,
+        "reviews":      [{"id":r.id,"rating":r.rating,"comment":r.comment,"created_at":r.created_at.isoformat()} for r in reviews[:20]],
+    })
+
 
 @customer_bp.get("/restaurants/<int:restaurant_id>/menu")
 @require_customer

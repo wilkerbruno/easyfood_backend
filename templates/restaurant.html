@@ -136,6 +136,9 @@
           <div class="nav-item" id="nav-bankaccount" onclick="switchTab('bankaccount',this)">
             <span class="nav-icon">🏦</span> Conta Bancária
           </div>
+          <div class="nav-item" id="nav-reviews" onclick="switchTab('reviews',this)">
+            <span class="nav-icon">⭐</span> Avaliações
+          </div>
         </nav>
         <div class="sidebar-footer">
           <button class="btn btn-danger btn-sm btn-block" onclick="doLogout()">Sair</button>
@@ -216,6 +219,11 @@
           <!-- ── ABA: CONTA BANCÁRIA ────────────────────────── -->
           <div id="tab-bankaccount" class="tab-content">
             <div id="bankaccount-content"></div>
+          </div>
+
+          <!-- ── ABA: AVALIAÇÕES ───────────────────────────── -->
+          <div id="tab-reviews" class="tab-content">
+            <div id="reviews-content"></div>
           </div>
 
         </div><!-- .main-body -->
@@ -322,7 +330,8 @@ let currentTab     = "orders";
 
 const ROLE_LABELS = { admin:"Administrador", manager:"Gerente", attendant:"Funcionário" };
 const TAB_TITLES  = { orders:"Pedidos", inventory:"Estoque", qrcodes:"QR Codes",
-                      reports:"Relatórios", employees:"Equipe", bankaccount:"Conta Bancária" };
+                      reports:"Relatórios", employees:"Equipe", bankaccount:"Conta Bancária",
+                      reviews:"Avaliações" };
 
 // ── Sidebar mobile ───────────────────────────────────────────
 function openSidebar()  {
@@ -411,6 +420,7 @@ function switchTab(name, navEl) {
   if (name === "reports")     initReport();
   if (name === "employees")   loadEmployees();
   if (name === "bankaccount") loadBankAccount();
+  if (name === "reviews")     loadReviews();
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
@@ -938,6 +948,56 @@ function spinner() { return `<div class="spinner">Carregando...</div>`; }
 // ── Utils ─────────────────────────────────────────────────────
 function escHtml(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function escJson(obj) { return JSON.stringify(obj).replace(/'/g,"&#39;"); }
+
+// ── Avaliações ────────────────────────────────────────────────
+async function loadReviews() {
+  const el = document.getElementById("reviews-content");
+  el.innerHTML = spinner();
+  const { status, body } = await http.request("GET", "/api/v1/restaurant/reviews", null, true);
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar avaliações</div>`; return; }
+
+  const { total, average, star_percent, reviews } = body;
+
+  const starBar = (pct, label) => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <span style="font-size:12px;color:var(--text-muted);width:14px;text-align:right;">${label}</span>
+      <span style="font-size:13px;">⭐</span>
+      <div style="flex:1;background:rgba(255,255,255,.08);border-radius:20px;height:10px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${pct>70?'var(--success)':pct>40?'var(--warning)':'var(--danger)'};border-radius:20px;transition:width .4s;"></div>
+      </div>
+      <span style="font-size:12px;color:var(--text-muted);width:40px;">${pct}%</span>
+    </div>`;
+
+  const starsDisplay = (rating) => '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+
+  el.innerHTML = total === 0 ? `
+    <div class="empty-state"><div class="empty-icon">⭐</div><p>Nenhuma avaliação ainda</p>
+    <p style="font-size:13px;margin-top:8px;">As avaliações aparecem aqui quando clientes avaliarem seus pedidos.</p></div>
+  ` : `
+    <!-- Resumo -->
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;background:var(--bg-card);border-radius:var(--radius);padding:20px;margin-bottom:20px;max-width:560px;">
+      <div style="text-align:center;">
+        <div style="font-size:52px;font-weight:900;color:var(--primary);line-height:1;">${average}</div>
+        <div style="font-size:22px;margin:4px 0;">${'⭐'.repeat(Math.round(average))}${'☆'.repeat(5-Math.round(average))}</div>
+        <div style="font-size:12px;color:var(--text-muted);">${total} avaliação${total!==1?'s':''}</div>
+      </div>
+      <div>
+        ${[5,4,3,2,1].map(i => starBar(star_percent[i]||0, i)).join('')}
+      </div>
+    </div>
+
+    <!-- Lista -->
+    <div style="max-width:640px;">
+      ${reviews.map(r => `
+        <div class="card" style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <span style="font-size:18px;">${starsDisplay(r.rating)}</span>
+            <span style="font-size:11px;color:var(--text-muted);">${new Date(r.created_at).toLocaleDateString('pt-BR')}</span>
+          </div>
+          ${r.comment ? `<p style="font-size:13px;color:var(--text-secondary);margin-top:4px;">"${escHtml(r.comment)}"</p>` : `<p style="font-size:12px;color:var(--text-muted);font-style:italic;">Sem comentário</p>`}
+        </div>`).join('')}
+    </div>`;
+}
 
 // ── API helpers extras ────────────────────────────────────────
 http.getEmployees    = ()        => http.request("GET",    "/api/v1/restaurant/employees",      null, true);
