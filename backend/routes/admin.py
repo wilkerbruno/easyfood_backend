@@ -513,47 +513,139 @@ def splits_report():
     })
 
 
-@admin_bp.post("/restaurants/<int:rest_id>/pagarme/recipient")
+@admin_bp.post("/restaurants/<int:rest_id>/appmax/recipient")
 @admin_required
-def create_pagarme_recipient(rest_id: int):
-    """Cria ou atualiza o recipient do restaurante no Pagar.me."""
-    from backend.pagarme import criar_recipient
-    from backend.models import RestaurantBankAccount
+def criar_appmax_recipient(rest_id: int):
+    """
+    Etapa 1 do onboarding APPMAX:
+    Cria o recebedor (recipient) para o restaurante.
+    Retorna o recipient_id e o link de KYC para o dono do restaurante.
+    """
+    from backend.appmax_payment import criar_recipient, gerar_link_kyc
 
     rest = Restaurant.query.get_or_404(rest_id)
     data = request.get_json() or {}
 
+    # Permite sobrescrever dados pelo payload
+    if data.get("owner_name"):      rest.owner_name  = data["owner_name"]
+    if data.get("owner_email"):     rest.owner_email = data["owner_email"]
+    if data.get("phone"):           rest.phone       = data["phone"]
+    if data.get("cnpj"):            rest.cnpj        = data["cnpj"]
+    if data.get("razao_social"):    rest.razao_social = data["razao_social"]
+
     try:
-        result = criar_recipient(data)
-        recipient_id = result.get("id")
+        result       = criar_recipient(rest)
+        recipient_id = str(result.get("id") or result.get("recipient_id", ""))
 
-        # Salva o recipient_id no banco
-        bank = RestaurantBankAccount.query.filter_by(restaurant_id=rest_id).first()
-        if bank:
-            bank.pagarme_recipient_id = recipient_id
-        else:
-            bank = RestaurantBankAccount(
-                restaurant_id        = rest_id,
-                pagarme_recipient_id = recipient_id,
-                **{k: data.get(k) for k in ["pix_key","pix_key_type","bank_name",
-                   "bank_agency","bank_account","bank_account_type",
-                   "bank_holder_name","bank_holder_document"] if data.get(k)}
-            )
-            db.session.add(bank)
-
+        rest.appmax_recipient_id     = recipient_id
+        rest.appmax_recipient_status = result.get("status", "pending_kyc")
         db.session.commit()
-        return jsonify({"recipient_id": recipient_id, "status": "created"}), 201
+
+        # Gera link de KYC (FaceMatch)
+        kyc_url = ""
+        try:
+            kyc_url = gerar_link_kyc(recipient_id)
+        except Exception as e:
+            print(f"[APPMAX] Aviso ao gerar KYC: {e}")
+
+        return jsonify({
+            "recipient_id": recipient_id,
+            "status":       rest.appmax_recipient_status,
+            "kyc_url":      kyc_url,
+            "message":      "Recebedor criado! Envie o link KYC ao responsável pelo restaurante para validação."
+        }), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@admin_bp.get("/restaurants/<int:rest_id>/pagarme/recipient")
+@admin_bp.get("/restaurants/<int:rest_id>/appmax/recipient")
 @admin_required
-def get_pagarme_recipient(rest_id: int):
-    """Retorna o recipient_id do restaurante."""
-    from backend.models import RestaurantBankAccount
-    bank = RestaurantBankAccount.query.filter_by(restaurant_id=rest_id).first()
-    if not bank or not bank.pagarme_recipient_id:
-        return jsonify({"recipient_id": None, "configured": False}), 200
-    return jsonify({"recipient_id": bank.pagarme_recipient_id, "configured": True}), 200
+def consultar_appmax_recipient(rest_id: int):
+    """Consulta status do recebedor APPMAX do restaurante."""
+    from backend.appmax_payment import consultar_recipient
+
+    rest = Restaurant.query.get_or_404(rest_id)
+
+    if not rest.appmax_recipient_id:
+        return jsonify({
+            "configured": False,
+            "recipient_id": None,
+            "status": None,
+            "message": "Recebedor APPMAX não cadastrado para este restaurante"
+        }), 200
+
+    try:
+        data = consultar_recipient(rest.appmax_recipient_id)
+        status = data.get("status", rest.appmax_recipient_status)
+
+        # Atualiza status local
+        rest.appmax_recipient_status = status
+        db.session.commit()
+
+        return jsonify({
+            "configured":    True,
+            "recipient_id":  rest.appmax_recipient_id,
+            "status":        status,
+            "kyc_approved":  status in ("active", "approved", "enabled"),
+            "data":          data,
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.post("/restaurants/<int:rest_id>/appmax/kyc")
+@admin_required
+def gerar_kyc_appmax(rest_id: int):
+    """Gera (ou regenera) o link de FaceMatch KYC para o restaurante."""
+    from backend.appmax_payment import gerar_link_kyc
+
+    rest = Restaurant.query.get_or_404(rest_id)
+
+    if not rest.appmax_recipient_id:
+        return jsonify({"error": "Recebedor não cadastrado. Crie o recipient primeiro."}), 400
+
+    try:
+        kyc_url = gerar_link_kyc(rest.appmax_recipient_id)
+        return jsonify({"kyc_url": kyc_url}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.get("/restaurants/<int:rest_id>/appmax/balance")
+@admin_required
+def saldo_appmax_recipient(rest_id: int):
+    """Consulta saldo disponível do restaurante na APPMAX."""
+    from backend.appmax_payment import consultar_saldo_recipient
+
+    rest = Restaurant.query.get_or_404(rest_id)
+
+    if not rest.appmax_recipient_id:
+        return jsonify({"error": "Recebedor não cadastrado"}), 400
+
+    try:
+        data = consultar_saldo_recipient(rest.appmax_recipient_id)
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.post("/restaurants/<int:rest_id>/appmax/withdraw")
+@admin_required
+def solicitar_saque_appmax(rest_id: int):
+    """Solicita saque do saldo disponível do restaurante na APPMAX."""
+    from backend.appmax_payment import solicitar_saque
+
+    rest   = Restaurant.query.get_or_404(rest_id)
+    data   = request.get_json() or {}
+    amount = data.get("amount_cents")  # opcional — sem valor, saca tudo
+
+    if not rest.appmax_recipient_id:
+        return jsonify({"error": "Recebedor não cadastrado"}), 400
+
+    try:
+        result = solicitar_saque(rest.appmax_recipient_id, amount)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

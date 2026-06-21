@@ -228,7 +228,10 @@ def upload_logo():
         if os.path.exists(old_path):
             os.remove(old_path)
 
-    base_url = request.host_url.rstrip("/")
+    base_url = os.getenv(
+        "SERVER_PUBLIC_URL",
+        "https://easyfood.pro"
+    ).rstrip("/")
     rest.logo_url = f"{base_url}/static/uploads/logos/{filename}"
     db.session.commit()
 

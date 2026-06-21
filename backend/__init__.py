@@ -93,6 +93,11 @@ def create_app(env: str = "development") -> Flask:
     def health():
         return {"status": "ok", "app": "EasyFood", "python": "3.14+"}
 
+    @app.get("/static/uploads/logos/<path:filename>")
+    def serve_logo(filename):
+        uploads_dir = os.path.join(STATIC_DIR, "uploads", "logos")
+        return send_from_directory(uploads_dir, filename)
+
     # Inicia o scheduler de liberacao automatica de mesa (apenas 1x por processo)
     if env == "production" and not app.config.get("_SCHEDULER_STARTED"):
         try:
