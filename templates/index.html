@@ -279,7 +279,7 @@
 <!-- MODAL AVALIAÇÃO -->
 <div id="modal-review" class="modal-overlay">
   <div class="modal-box">
-    <button class="modal-close" onclick="closeModal('review')">✕</button>
+    <button class="modal-close" onclick="closeReviewModal()">✕</button>
     <div class="modal-title">Avaliar pedido ⭐</div>
     <div id="review-stars" style="font-size:40px;text-align:center;margin:12px 0;letter-spacing:4px;">★★★★★</div>
     <input type="range" id="review-rating" min="1" max="5" value="5" oninput="updateStars(this.value)" style="width:100%;margin-bottom:12px;">
@@ -731,7 +731,7 @@ function startTracking(order) {
         updateTrackingUI(body);
         if (["delivered","cancelled"].includes(body.status)) {
           clearInterval(pollInterval);
-          if (body.status === "delivered") setTimeout(() => openModal("review"), 2000);
+          if (body.status === "delivered") setTimeout(() => openReviewModal(body.id), 2000);
         }
       }
     }, 8000);
@@ -785,17 +785,60 @@ async function viewOrder(id) {
 
 // ── Avaliação ─────────────────────────────────────────────────
 let reviewRating = 5;
-function openModal(n)  { document.getElementById(`modal-${n}`).classList.add("open"); pendingReviewId = currentOrder?.id; }
+let pendingReviewOrderId = null;
+
+function openReviewModal(orderId) {
+  pendingReviewOrderId = orderId;
+  reviewRating = 5;
+  const starsEl = document.getElementById("review-stars");
+  const ratingEl = document.getElementById("review-rating");
+  const commentEl = document.getElementById("review-comment");
+  if (starsEl) starsEl.textContent = "★★★★★";
+  if (ratingEl) ratingEl.value = "5";
+  if (commentEl) commentEl.value = "";
+  document.getElementById("modal-review").classList.add("open");
+}
+
+function closeReviewModal() {
+  document.getElementById("modal-review").classList.remove("open");
+  pendingReviewOrderId = null;
+}
+
+function openModal(n) { document.getElementById(`modal-${n}`).classList.add("open"); }
 function closeModal(n) { document.getElementById(`modal-${n}`).classList.remove("open"); }
+
 function updateStars(v) {
   reviewRating = parseInt(v);
   document.getElementById("review-stars").textContent = "★".repeat(reviewRating)+"☆".repeat(5-reviewRating);
 }
+
 async function submitReview() {
-  if (!pendingReviewId) return;
-  await http.reviewOrder(pendingReviewId, reviewRating, document.getElementById("review-comment").value.trim());
-  closeModal("review");
+  const btn = document.querySelector("#modal-review .btn-primary");
+  if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
+  try {
+    if (pendingReviewOrderId) {
+      const comment = document.getElementById("review-comment").value.trim();
+      await http.reviewOrder(pendingReviewOrderId, reviewRating, comment);
+    }
+  } catch(e) {}
+  closeReviewModal();
+  if (btn) { btn.disabled = false; btn.textContent = "Enviar Avaliação"; }
   toast("Obrigado pela avaliação! ⭐","success");
+}
+
+// Verifica pedido pendente de avaliação após iniciar sessão
+async function checkPendingReview() {
+  try {
+    const { status, body } = await http.getOrders();
+    if (status !== 200 || !Array.isArray(body)) return;
+    // Encontra pedido entregue mais recente
+    const delivered = body.find(o => o.status === "delivered");
+    if (!delivered) return;
+    // Verifica se já tem review via check no backend
+    const check = await http.request("GET", `/api/v1/customer/orders/${delivered.id}/review-status`);
+    if (check.status === 200 && check.body?.reviewed) return; // já avaliado
+    setTimeout(() => openReviewModal(delivered.id), 1000);
+  } catch(e) {}
 }
 
 // ── Utils ─────────────────────────────────────────────────────
@@ -804,7 +847,7 @@ function escHtml(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&
 // ── Init ──────────────────────────────────────────────────────
 (function init() {
   updateWelcomeUI();
-  if (http._sessionToken) { showScreen("restaurants"); loadRestaurants(); }
+  if (http._sessionToken) { showScreen("restaurants"); loadRestaurants(); checkPendingReview(); }
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(()=>{});
 })();
 

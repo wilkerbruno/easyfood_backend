@@ -435,6 +435,15 @@ def pagarme_webhook():
 
 # ── Avaliar pedido ────────────────────────────────────────────
 
+@customer_bp.get("/orders/<int:order_id>/review-status")
+@require_customer
+def review_status(customer: Customer, order_id: int):
+    """Verifica se o pedido já foi avaliado."""
+    from backend.models import Review
+    reviewed = Review.query.filter_by(order_id=order_id).first() is not None
+    return jsonify({"reviewed": reviewed})
+
+
 @customer_bp.post("/orders/<int:order_id>/review")
 @require_customer
 def review_order(customer: Customer, order_id: int):
