@@ -32,16 +32,15 @@ def require_customer(f):
             return jsonify({"error": "Token de sessão obrigatório"}), 401
         customer = get_customer_from_token(token)
         if not customer:
-        return jsonify({"error": "Sessão inválida ou expirada"}), 401
-    try:
-        exp = customer.expires_at
-        if isinstance(exp, str):
-            exp = datetime.fromisoformat(exp.replace('Z',''))
-        if exp < datetime.utcnow():
             return jsonify({"error": "Sessão inválida ou expirada"}), 401
-    except Exception:
-        pass
-            return jsonify({"error": "Sessão inválida ou expirada"}), 401
+        try:
+            exp = customer.expires_at
+            if isinstance(exp, str):
+                exp = datetime.fromisoformat(exp.replace('Z',''))
+            if exp < datetime.utcnow():
+                return jsonify({"error": "Sessão inválida ou expirada"}), 401
+        except Exception:
+            pass
         if not customer.is_active:
             return jsonify({"error": "Sessão desconectada. Escaneie o QR Code novamente."}), 401
         return f(customer, *args, **kwargs)
