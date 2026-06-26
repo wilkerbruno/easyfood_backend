@@ -143,7 +143,7 @@ def list_restaurants(customer: Customer):
             func.avg(Review.rating).label('avg'),
             func.count(Review.id).label('total')
         ).filter_by(restaurant_id=r.id).first()
-        d['average_rating'] = round(float(agg.avg), 1) if agg.avg else 0.0
+        d['average_rating'] = round(float(agg.avg), 1) if agg and agg.avg else 0.0
         d['total_reviews']  = agg.total or 0
         result.append(d)
 
