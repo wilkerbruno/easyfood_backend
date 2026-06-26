@@ -522,8 +522,7 @@ async function enterCourt(qrToken, tableNumber, name) {
 
     // Se o QR Code é de um restaurante específico, vai direto pro cardápio
     if (body.restaurant_id) {
-      const { status: rs, body: rb } = await http.getMenu(body.restaurant_id);
-      if (rs === 200) selectRestaurant(rb.id, rb.name);
+      selectRestaurant(body.restaurant_id, '');
     }
   } else {
     const errEl = document.getElementById("manual-error");
