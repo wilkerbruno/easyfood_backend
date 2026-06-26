@@ -573,8 +573,8 @@ async function renderMenu() {
   el.innerHTML = spinner();
   const { status, body } = await http.getMenu(currentRestaurant.id);
   if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar cardápio</div>`; return; }
-  if (!body.menu?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🍽️</div><p>Cardápio indisponível</p></div>`; return; }
-  el.innerHTML = body.menu.map(cat => `
+  if (!body.categories?.length) { el.innerHTML = `<div class="empty-state"><div class="empty-icon">🍽️</div><p>Cardápio indisponível</p></div>`; return; }
+  el.innerHTML = body.categories.map(cat => `
     <div>
       <p class="text-primary fw-bold" style="font-size:15px;padding:8px 0 4px;">${escHtml(cat.name)}</p>
       ${(cat.items||[]).map(item => `
