@@ -267,6 +267,25 @@ def list_categories():
     return jsonify([c.to_dict() for c in cats])
 
 
+@restaurant_bp.post("/menu/categories")
+@jwt_required()
+def create_category():
+    emp  = current_employee()
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "Nome é obrigatório"}), 400
+    cat = MenuCategory(
+        restaurant_id = emp.restaurant_id,
+        name          = name,
+        display_order = int(data.get("display_order") or 0),
+        is_active     = True,
+    )
+    db.session.add(cat)
+    db.session.commit()
+    return jsonify(cat.to_dict()), 201
+
+
 @restaurant_bp.get("/profile")
 @jwt_required()
 def get_profile():

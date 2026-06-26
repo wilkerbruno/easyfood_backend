@@ -136,6 +136,9 @@
           <div class="nav-item" id="nav-bankaccount" onclick="switchTab('bankaccount',this)">
             <span class="nav-icon">🏦</span> Conta Bancária
           </div>
+          <div class="nav-item" id="nav-menu" onclick="switchTab('menu',this)">
+            <span class="nav-icon">🍽️</span> Cardápio
+          </div>
           <div class="nav-item" id="nav-reviews" onclick="switchTab('reviews',this)">
             <span class="nav-icon">⭐</span> Avaliações
           </div>
@@ -219,6 +222,19 @@
           <!-- ── ABA: CONTA BANCÁRIA ────────────────────────── -->
           <div id="tab-bankaccount" class="tab-content">
             <div id="bankaccount-content"></div>
+          </div>
+
+          <!-- ── ABA: CARDÁPIO ─────────────────────────────── -->
+          <div id="tab-menu" class="tab-content">
+            <div class="toolbar">
+              <select id="menu-cat-filter" onchange="filterMenuItems()" style="max-width:220px;">
+                <option value="">Todas as categorias</option>
+              </select>
+              <div class="spacer"></div>
+              <button class="btn btn-secondary btn-sm" onclick="loadMenu()">↻ Atualizar</button>
+              <button class="btn btn-primary btn-sm" onclick="openAddMenuItem()">+ Novo Item</button>
+            </div>
+            <div id="menu-content"></div>
           </div>
 
           <!-- ── ABA: AVALIAÇÕES ───────────────────────────── -->
@@ -314,6 +330,49 @@
   </div>
 </div>
 
+
+<!-- Modal: Novo/Editar Item do Cardápio -->
+<div id="modal-menu-item" class="modal-overlay">
+  <div class="modal-box modal-box-lg">
+    <button class="modal-close" onclick="closeModal('menu-item')">✕</button>
+    <div class="modal-title" id="menu-item-modal-title">Novo Item</div>
+    <input type="hidden" id="menu-item-id">
+    <div class="form-grid">
+      <div class="input-group col-span-2"><label>Nome *</label><input type="text" id="item-name" placeholder="Ex: Frango Grelhado"></div>
+      <div class="input-group col-span-2"><label>Descrição</label><textarea id="item-desc" rows="2" placeholder="Ingredientes, modo de preparo..."></textarea></div>
+      <div class="input-group"><label>Preço (R$) *</label><input type="number" id="item-price" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="input-group"><label>Categoria</label>
+        <select id="item-category">
+          <option value="">Sem categoria</option>
+        </select>
+      </div>
+      <div class="input-group"><label>Tempo de preparo (min)</label><input type="number" id="item-prep-time" min="0" placeholder="Ex: 15"></div>
+      <div class="input-group"><label>Calorias (kcal)</label><input type="number" id="item-calories" min="0" placeholder="Ex: 350"></div>
+      <div class="input-group col-span-2"><label>URL da imagem</label><input type="text" id="item-image" placeholder="https://..."></div>
+      <div class="input-group"><label>Disponível</label>
+        <select id="item-available">
+          <option value="true">Sim</option>
+          <option value="false">Não</option>
+        </select>
+      </div>
+    </div>
+    <div id="menu-item-error" class="alert alert-danger hidden"></div>
+    <button class="btn btn-primary btn-block" onclick="saveMenuItem()" id="btn-save-menu-item">Salvar Item</button>
+  </div>
+</div>
+
+<!-- Modal: Nova Categoria -->
+<div id="modal-menu-category" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('menu-category')">✕</button>
+    <div class="modal-title">Nova Categoria</div>
+    <div class="input-group"><label>Nome da Categoria *</label><input type="text" id="cat-name" placeholder="Ex: Pratos Principais"></div>
+    <div class="input-group"><label>Ordem de exibição</label><input type="number" id="cat-order" value="0" min="0"></div>
+    <div id="cat-error" class="alert alert-danger hidden"></div>
+    <button class="btn btn-primary btn-block" onclick="saveCategory()">Salvar Categoria</button>
+  </div>
+</div>
+
 <script src="/static/js/core.js"></script>
 <script>
 // =============================================================
@@ -331,7 +390,7 @@ let currentTab     = "orders";
 const ROLE_LABELS = { admin:"Administrador", manager:"Gerente", attendant:"Funcionário" };
 const TAB_TITLES  = { orders:"Pedidos", inventory:"Estoque", qrcodes:"QR Codes",
                       reports:"Relatórios", employees:"Equipe", bankaccount:"Conta Bancária",
-                      reviews:"Avaliações" };
+                      reviews:"Avaliações", menu:"Cardápio" };
 
 // ── Sidebar mobile ───────────────────────────────────────────
 function openSidebar()  {
@@ -421,6 +480,7 @@ function switchTab(name, navEl) {
   if (name === "employees")   loadEmployees();
   if (name === "bankaccount") loadBankAccount();
   if (name === "reviews")     loadReviews();
+  if (name === "menu")        loadMenu();
 }
 
 // ── Dashboard ─────────────────────────────────────────────────
@@ -948,6 +1008,201 @@ function spinner() { return `<div class="spinner">Carregando...</div>`; }
 // ── Utils ─────────────────────────────────────────────────────
 function escHtml(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function escJson(obj) { return JSON.stringify(obj).replace(/'/g,"&#39;"); }
+
+
+// ── Cardápio ──────────────────────────────────────────────────
+let allMenuItems = [];
+let allCategories = [];
+
+async function loadMenu() {
+  const el = document.getElementById("menu-content");
+  el.innerHTML = spinner();
+  const { status, body } = await http.request("GET", "/api/v1/restaurant/menu", null, true);
+  if (status !== 200) { el.innerHTML = `<div class="alert alert-danger">Erro ao carregar cardápio</div>`; return; }
+
+  allCategories = body.categories || [];
+  allMenuItems  = allCategories.flatMap(c => (c.items || []).map(i => ({...i, categoryName: c.name})));
+
+  // Popula filtro de categorias
+  const sel = document.getElementById("menu-cat-filter");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">Todas as categorias</option>` +
+    allCategories.map(c => `<option value="${c.id||''}">${escHtml(c.name)}</option>`).join('');
+  sel.value = cur;
+
+  renderMenuItems(allMenuItems);
+}
+
+function filterMenuItems() {
+  const catId = document.getElementById("menu-cat-filter").value;
+  const filtered = catId
+    ? allMenuItems.filter(i => String(i.category_id) === catId || (!i.category_id && catId === ''))
+    : allMenuItems;
+  renderMenuItems(filtered);
+}
+
+function renderMenuItems(items) {
+  const el = document.getElementById("menu-content");
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🍽️</div>
+      <p>Nenhum item no cardápio</p>
+      <p style="font-size:13px;margin-top:8px;">Clique em <strong>"+ Novo Item"</strong> para adicionar</p>
+      <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="openModal('menu-category')">+ Nova Categoria</button>
+    </div>`;
+    return;
+  }
+
+  // Agrupa por categoria
+  const byCategory = {};
+  items.forEach(i => {
+    const key = i.categoryName || 'Sem Categoria';
+    if (!byCategory[key]) byCategory[key] = [];
+    byCategory[key].push(i);
+  });
+
+  el.innerHTML = `
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="openModal('menu-category')">+ Nova Categoria</button>
+    </div>
+    ${Object.entries(byCategory).map(([cat, catItems]) => `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="flex-between mb-12">
+          <p class="fw-bold" style="font-size:15px;">🗂 ${escHtml(cat)}</p>
+          <span class="text-muted" style="font-size:12px;">${catItems.length} item(s)</span>
+        </div>
+        <div class="data-grid">${catItems.map(item => `
+          <div class="card" style="padding:12px;background:rgba(255,255,255,.04);">
+            <div class="flex-between mb-6">
+              <div style="flex:1;min-width:0;">
+                <div class="fw-bold" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.name)}</div>
+                ${item.description ? `<div class="text-muted" style="font-size:12px;margin-top:2px;">${escHtml(item.description.substring(0,60))}${item.description.length>60?'...':''}</div>` : ''}
+              </div>
+              <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+                <div class="text-primary fw-bold">${fmt.currency(item.price)}</div>
+                <span class="badge ${item.is_available!==false?'badge-success':'badge-danger'}" style="font-size:10px;">
+                  ${item.is_available!==false?'Disponível':'Indisponível'}
+                </span>
+              </div>
+            </div>
+            ${item.prep_time ? `<div class="text-muted" style="font-size:11px;margin-bottom:6px;">⏱ ${item.prep_time} min${item.calories?' • 🔥 '+item.calories+' kcal':''}</div>` : ''}
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <button class="btn btn-info btn-xs" onclick='editMenuItem(${escJson(item)})'>✏️ Editar</button>
+              <button class="btn ${item.is_available!==false?'btn-warning':'btn-success'} btn-xs" onclick="toggleMenuItem(${item.id},${item.is_available!==false})">
+                ${item.is_available!==false?'⏸ Pausar':'▶ Ativar'}
+              </button>
+              <button class="btn btn-danger btn-xs" onclick="deleteMenuItem(${item.id},'${escHtml(item.name)}')">🗑</button>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>`).join('')}`;
+}
+
+function openAddMenuItem() {
+  document.getElementById("menu-item-modal-title").textContent = "Novo Item";
+  document.getElementById("menu-item-id").value = "";
+  ["item-name","item-desc","item-image"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("item-price").value = "";
+  document.getElementById("item-prep-time").value = "";
+  document.getElementById("item-calories").value = "";
+  document.getElementById("item-available").value = "true";
+  document.getElementById("menu-item-error").classList.add("hidden");
+
+  // Popula categorias no select
+  const sel = document.getElementById("item-category");
+  sel.innerHTML = `<option value="">Sem categoria</option>` +
+    allCategories.filter(c => c.id).map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+
+  document.getElementById("btn-save-menu-item").textContent = "Salvar Item";
+  openModal("menu-item");
+}
+
+function editMenuItem(item) {
+  document.getElementById("menu-item-modal-title").textContent = "Editar Item";
+  document.getElementById("menu-item-id").value = item.id;
+  document.getElementById("item-name").value        = item.name || "";
+  document.getElementById("item-desc").value        = item.description || "";
+  document.getElementById("item-price").value       = item.price || "";
+  document.getElementById("item-prep-time").value   = item.prep_time || "";
+  document.getElementById("item-calories").value    = item.calories || "";
+  document.getElementById("item-image").value       = item.image_url || "";
+  document.getElementById("item-available").value   = String(item.is_available !== false);
+  document.getElementById("menu-item-error").classList.add("hidden");
+
+  const sel = document.getElementById("item-category");
+  sel.innerHTML = `<option value="">Sem categoria</option>` +
+    allCategories.filter(c => c.id).map(c =>
+      `<option value="${c.id}" ${c.id===item.category_id?"selected":""}>${escHtml(c.name)}</option>`
+    ).join('');
+
+  document.getElementById("btn-save-menu-item").textContent = "Salvar Alterações";
+  openModal("menu-item");
+}
+
+async function saveMenuItem() {
+  const id      = document.getElementById("menu-item-id").value;
+  const name    = document.getElementById("item-name").value.trim();
+  const price   = parseFloat(document.getElementById("item-price").value);
+  const errEl   = document.getElementById("menu-item-error");
+  errEl.classList.add("hidden");
+
+  if (!name)       { errEl.textContent = "Nome é obrigatório";  errEl.classList.remove("hidden"); return; }
+  if (isNaN(price) || price < 0) { errEl.textContent = "Preço inválido"; errEl.classList.remove("hidden"); return; }
+
+  const catId = document.getElementById("item-category").value;
+  const data  = {
+    name,
+    description:  document.getElementById("item-desc").value.trim() || null,
+    price,
+    category_id:  catId ? parseInt(catId) : null,
+    prep_time:    parseInt(document.getElementById("item-prep-time").value) || null,
+    calories:     parseInt(document.getElementById("item-calories").value) || null,
+    image_url:    document.getElementById("item-image").value.trim() || null,
+    is_available: document.getElementById("item-available").value === "true",
+  };
+
+  const btn = document.getElementById("btn-save-menu-item");
+  btn.disabled = true; btn.textContent = "Salvando...";
+
+  const url    = id ? `/api/v1/restaurant/menu/items/${id}` : "/api/v1/restaurant/menu/items";
+  const method = id ? "PUT" : "POST";
+  const { status, body } = await http.request(method, url, data, true);
+
+  btn.disabled = false; btn.textContent = id ? "Salvar Alterações" : "Salvar Item";
+
+  if (status === 200 || status === 201) {
+    closeModal("menu-item");
+    toast(id ? "Item atualizado! ✓" : "Item adicionado! ✓", "success");
+    loadMenu();
+  } else {
+    errEl.textContent = body.error || "Erro ao salvar";
+    errEl.classList.remove("hidden");
+  }
+}
+
+async function toggleMenuItem(id, currentlyAvailable) {
+  const { status } = await http.request("PUT", `/api/v1/restaurant/menu/items/${id}`, { is_available: !currentlyAvailable }, true);
+  if (status === 200) { toast(currentlyAvailable ? "Item pausado" : "Item ativado", "success"); loadMenu(); }
+  else toast("Erro ao atualizar", "error");
+}
+
+async function deleteMenuItem(id, name) {
+  if (!confirm(`Remover "${name}" do cardápio?`)) return;
+  const { status } = await http.request("DELETE", `/api/v1/restaurant/menu/items/${id}`, null, true);
+  if (status === 200) { toast("Item removido", "success"); loadMenu(); }
+  else toast("Erro ao remover", "error");
+}
+
+async function saveCategory() {
+  const name  = document.getElementById("cat-name").value.trim();
+  const order = parseInt(document.getElementById("cat-order").value) || 0;
+  const errEl = document.getElementById("cat-error");
+  errEl.classList.add("hidden");
+  if (!name) { errEl.textContent = "Nome é obrigatório"; errEl.classList.remove("hidden"); return; }
+  const { status, body } = await http.request("POST", "/api/v1/restaurant/menu/categories", { name, display_order: order }, true);
+  if (status === 201) { closeModal("menu-category"); toast("Categoria criada! ✓", "success"); document.getElementById("cat-name").value = ""; loadMenu(); }
+  else { errEl.textContent = body.error || "Erro ao criar"; errEl.classList.remove("hidden"); }
+}
+
 
 // ── Avaliações ────────────────────────────────────────────────
 async function loadReviews() {
