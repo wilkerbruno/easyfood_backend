@@ -25,6 +25,15 @@ def create_app(env: str = "development") -> Flask:
     )
     app.config.from_object(config[env])
 
+    # NullPool - sem pool, cada request usa conexão nova e descarta ao fim
+    import flask_sqlalchemy as _fsa
+    def _nullpool_engine(self, bind_key, options, app):
+        from sqlalchemy import create_engine as _ce
+        from sqlalchemy.pool import NullPool as _NP
+        url = options.pop("url", None) or app.config["SQLALCHEMY_DATABASE_URI"]
+        return _ce(url, poolclass=_NP)
+    _fsa.SQLAlchemy._make_engine = _nullpool_engine
+
     # Extensoes
     db.init_app(app)
     JWTManager(app)
