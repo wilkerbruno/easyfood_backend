@@ -30,7 +30,12 @@ def require_customer(f):
         token = request.headers.get("X-Session-Token")
         if not token:
             return jsonify({"error": "Token de sessão obrigatório"}), 401
-        customer = get_customer_from_token(token)
+        try:
+            db.session.remove()
+            customer = get_customer_from_token(token)
+        except Exception:
+            db.session.remove()
+            return jsonify({"error": "Erro de conexão, tente novamente"}), 503
         if not customer:
             return jsonify({"error": "Sessão inválida ou expirada"}), 401
         try:

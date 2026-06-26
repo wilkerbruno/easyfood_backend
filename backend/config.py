@@ -16,7 +16,7 @@ class Config:
         "mysql+pymysql://mysql:dm3exjaacxf4ekf9lddw@2.25.131.174:4006/easyfood_bd?charset=utf8mb4"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_POOL_RECYCLE        = 280
+    SQLALCHEMY_POOL_RECYCLE        = 60
     SQLALCHEMY_POOL_PRE_PING       = True
     SQLALCHEMY_POOL_SIZE           = 5
     SQLALCHEMY_MAX_OVERFLOW        = 10
