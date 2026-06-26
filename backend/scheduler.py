@@ -11,9 +11,11 @@ def check_table_release(app):
     1. Pedidos entregues ha 40+ min sem pergunta feita -> envia notificacao
     2. Clientes que nao responderam em 10 min -> desconecta (libera a mesa)
     """
-    with app.app_context():
+    try:
+     with app.app_context():
         from backend.models import db, Order, Customer
         from backend.firebase_notify import notify_table_release_check
+        db.session.remove()  # força nova conexão limpa
 
         now = datetime.utcnow()
 
@@ -50,6 +52,10 @@ def check_table_release(app):
             customer.is_active = False
             db.session.commit()
             print(f"[SCHEDULER] Cliente {customer.id} desconectado automaticamente - mesa {customer.table_number} liberada")
+
+
+    except Exception as e:
+        print(f'[SCHEDULER] Erro: {e}')
 
 
 def start_scheduler(app):
