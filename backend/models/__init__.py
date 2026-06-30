@@ -55,6 +55,10 @@ class Restaurant(db.Model):
     logo_url              = db.Column(db.String(500))
     appmax_recipient_id   = db.Column(db.String(100))  # ID do recebedor na APPMAX
     appmax_recipient_status = db.Column(db.String(50))  # pending_kyc | active | blocked
+    appmax_external_id      = db.Column(db.String(64))   # UUID gerado no health check da App Store
+    appmax_merchant_client_id     = db.Column(db.String(255))
+    appmax_merchant_client_secret = db.Column(db.String(255))
+    appmax_installed_at           = db.Column(db.DateTime)
     category         = db.Column(db.String(100))
     phone            = db.Column(db.String(20))
     opening_hours    = db.Column(db.String(200))

@@ -70,12 +70,14 @@ def create_app(env: str = "development") -> Flask:
     from backend.routes.payment    import payment_bp
     from backend.routes.bank       import bank_bp
     from backend.routes.restaurant import restaurant_bp
+    from backend.routes.appmax_install import appmax_install_bp
     app.register_blueprint(customer_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(payment_bp)
     app.register_blueprint(bank_bp)
     app.register_blueprint(restaurant_bp)
+    app.register_blueprint(appmax_install_bp)
 
     # Servir o PWA com caminhos absolutos
     @app.get("/")
